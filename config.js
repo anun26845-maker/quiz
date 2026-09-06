@@ -16,5 +16,5 @@
 window.HANDQUIZ_API = "";
 
 /* ตัวอย่างเมื่อใส่แล้ว
-window.HANDQUIZ_API = "https://script.google.com/macros/s/AKfycb...../exec";
+window.HANDQUIZ_API = "https://script.google.com/macros/s/AKfycbzyFafv8_prnkLG9CcR6wVgGW5MM2Sx1ZdvGsJ6vvbPNnaCJ939t547FOxkpByVb8BS/exec";
 */
