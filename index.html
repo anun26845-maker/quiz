@@ -841,6 +841,12 @@ details.more>summary:hover{color:var(--chalk)}
         <span class="muted" id="ePickNote" style="display:block;margin-top:6px"></span></div>
       <div class="field"><label for="eShuffle">สลับลำดับข้อ</label>
         <select id="eShuffle"><option value="no">ไม่สลับ</option><option value="yes">สลับ</option></select></div>
+      <div class="field"><label for="eMix">สลับตัวเลือกในแต่ละข้อ</label>
+        <select id="eMix">
+          <option value="0">ตามค่าที่ตั้งไว้ในเครื่อง</option>
+          <option value="1">สลับเสมอ</option>
+          <option value="2">ไม่สลับชุดนี้</option>
+        </select></div>
     </div>
     <div class="field" style="margin-bottom:0">
       <label for="eMode">วิธีใส่เนื้อหา</label>
@@ -908,6 +914,11 @@ details.more>summary:hover{color:var(--chalk)}
         <input id="cfg_timeLimit" type="number" min="0" max="120"></div>
       <div class="field"><label for="cfg_pickCount">สุ่มมาถามกี่ข้อ (0 = ถามทั้งหมด)</label>
         <input id="cfg_pickCount" type="number" min="0" max="500"></div>
+      <div class="field"><label for="cfg_shuffleChoices">สลับตัวเลือกในแต่ละข้อ</label>
+        <select id="cfg_shuffleChoices">
+          <option value="1">สลับ — กันเด็กจำว่าข้อนี้ตอบเลขอะไร</option>
+          <option value="0">ไม่สลับ</option>
+        </select></div>
       <div class="field"><label for="cfg_shuffle">สลับลำดับข้อ</label>
         <select id="cfg_shuffle">
           <option value="auto">ตามที่ตั้งไว้ในชุดข้อสอบ</option>
@@ -1119,7 +1130,7 @@ function show(id){
    ตั้งค่าขั้นสูง — ใช้ร่วมกันทุกเกม
    ========================================================== */
 const CFG_DEFAULT = {
-  timeLimit:0, shuffle:'auto', pickCount:0,
+  timeLimit:0, shuffle:'auto', pickCount:0, shuffleChoices:1,
   base:100, speedBonus:80, streakStep:20, streakMax:100,
   dwell:900, hitPad:26, gripFrames:3,
   matchPairs:4, matchTimeFactor:0.7,
@@ -1201,6 +1212,29 @@ function pickCount(total){
 function shuffleInPlace(a){
   for(let i=a.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; const t=a[i]; a[i]=a[j]; a[j]=t; }
   return a;
+}
+/* ข้อที่มีตัวเลือกแบบ ถูกทุกข้อ หรือ ไม่มีข้อใดถูก ห้ามสลับ เพราะตำแหน่งมีความหมาย */
+const KEEP_ORDER = /ถูกทุกข้อ|ถูกทั้งหมด|ทั้งหมดที่กล่าว|ทุกข้อที่กล่าว|ไม่มีข้อใด|ผิดทุกข้อ|ข้อ\s*[ก-ฮ]\s*(และ|กับ)|all of the above|none of the above|both a and b/i;
+
+/* 0 หรือไม่ใส่ = ตามค่ารวม, 1 = สลับเสมอ, 2 = ไม่สลับ */
+function mixChoicesOn(){
+  const p = (quiz && quiz.mixChoices)|0;
+  if(p===1) return true;
+  if(p===2) return false;
+  return !!CFG.shuffleChoices;
+}
+function shuffleChoices(){
+  if(!quiz || !quiz.questions) return;
+  if(!mixChoicesOn()) return;
+  quiz.questions.forEach(function(q){
+    if(!q.choices || q.choices.length<2) return;
+    const locked = q.choices.some(function(c){ return KEEP_ORDER.test(c.text||''); });
+    if(locked) return;
+    const right=q.choices[q.correct|0];
+    shuffleInPlace(q.choices);
+    const at=q.choices.indexOf(right);
+    q.correct = at<0 ? 0 : at;
+  });
 }
 function wantShuffle(){
   return CFG.shuffle==='auto' ? (quiz.shuffle==='yes') : (CFG.shuffle==='yes');
@@ -1289,7 +1323,7 @@ async function testApi(){
    ========================================================== */
 let quiz=null;
 function normalize(q){
-  const o=Object.assign({title:'ชุดข้อสอบ',timeLimit:20,shuffle:'no',game:'quiz',pick:0},q);
+  const o=Object.assign({title:'ชุดข้อสอบ',timeLimit:20,shuffle:'no',game:'quiz',pick:0,mixChoices:0},q);
   o.questions=(o.questions||[]).filter(x=>x&&x.choices&&x.choices.length>=2).map(x=>({
     text:String(x.text||''), image:x.image||'', correct:Math.max(0,Math.min((x.choices.length-1),x.correct|0)),
     choices:x.choices.slice(0,4).map(c=>({text:String((c&&c.text)||''), image:(c&&c.image)||''}))
@@ -1497,6 +1531,7 @@ function editSet(it){
   E.game=['match','face','run'].indexOf(d.game)>=0?d.game:'quiz';
   E.timeLimit=d.timeLimit||20;
   E.pick=d.pick|0;
+  E.mix=d.mixChoices|0;
   E.shuffle=d.shuffle==='yes'?'yes':'no';
   E.pairs=(d.pairs&&d.pairs.length)
     ? d.pairs.map(function(x){ return {left:x.left||'', right:x.right||''}; })
@@ -1560,7 +1595,7 @@ document.getElementById('eImport').addEventListener('change', function(e){
       E.id=null; E.folder=d.topic||'';
       E.title=d.title||''; E.topic=d.topic||'';
       E.game=['match','face','run'].indexOf(d.game)>=0?d.game:'quiz';
-      E.timeLimit=d.timeLimit||20; E.pick=d.pick|0; E.shuffle=d.shuffle==='yes'?'yes':'no';
+      E.timeLimit=d.timeLimit||20; E.pick=d.pick|0; E.mix=d.mixChoices|0; E.shuffle=d.shuffle==='yes'?'yes':'no';
       if(d.pairs && d.pairs.length){
         E.mode='pairs';
         E.pairs=d.pairs.map(function(x){ return { left:x.left||'', right:x.right||'' }; });
@@ -2316,6 +2351,7 @@ async function beginGame(){
   if(Hand.mode!=='hand') hint(Hand.why || 'ใช้เมาส์หรือแตะจอเพื่อเลือกคำตอบ');
   if(!rafId) rafId=requestAnimationFrame(loop);
 
+  shuffleChoices();
   G.idx=0; G.score=0; G.correct=0; G.streak=0; G.limit=baseTime();
   HIT_PAD=CFG.hitPad; Run.hearts=CFG.runHearts;
   Drag.el=null;
@@ -3352,7 +3388,7 @@ async function clearRoomScores(){
    นำเข้าข้อสอบจากไฟล์ Excel หรือ CSV
    ========================================================== */
 const SHEET_COLS = ['โฟลเดอร์','ชุดข้อสอบ','เกม','เวลาต่อข้อ','คำถาม',
-                    'ตัวเลือก ก','ตัวเลือก ข','ตัวเลือก ค','ตัวเลือก ง','เฉลย','สุ่มมาถามกี่ข้อ'];
+                    'ตัวเลือก ก','ตัวเลือก ข','ตัวเลือก ค','ตัวเลือก ง','เฉลย','สุ่มมาถามกี่ข้อ','สลับตัวเลือก'];
 
 function loadXLSX(){
   return new Promise(function(res,rej){
@@ -3388,7 +3424,7 @@ function parseCSV(text){
 
 function norm(v){ return String(v==null?'':v).trim(); }
 function headerIndex(head){
-  const idx={ folder:-1, title:-1, game:-1, time:-1, q:-1, ans:-1, right:-1, pick:-1, choices:[] };
+  const idx={ folder:-1, title:-1, game:-1, time:-1, q:-1, ans:-1, right:-1, pick:-1, mix:-1, choices:[] };
   head.forEach(function(h,i){
     const t=norm(h).toLowerCase();
     if(!t) return;
@@ -3399,6 +3435,7 @@ function headerIndex(head){
     if(idx.q<0 && /คำถาม|โจทย์|question|prompt/.test(t)) return void(idx.q=i);
     if(/ตัวเลือก|choice|option|^[กขคงจ]$|^[abcde]$/.test(t)) return void(idx.choices.push(i));
     if(idx.pick<0 && /สุ่ม|pick|จำนวนข้อที่ถาม/.test(t)) return void(idx.pick=i);
+    if(idx.mix<0 && /สลับตัวเลือก|mix|shufflechoice/.test(t)) return void(idx.mix=i);
     if(idx.ans<0 && /เฉลย|answer|correct|ข้อที่ถูก/.test(t)) return void(idx.ans=i);
     if(idx.right<0 && /คำตอบ|คู่กับ|แปลว่า|meaning|pair/.test(t)) return void(idx.right=i);
   });
@@ -3426,14 +3463,14 @@ function rowsToSets(rows){
   let idx=headerIndex(head);
   let start=1;
   if(idx.q<0){                       // ไม่มีหัวตาราง ให้ถือว่าเรียงตามแบบฟอร์ม
-    idx={ folder:0, title:1, game:2, time:3, q:4, choices:[5,6,7,8], ans:9, pick:10, right:-1 };
+    idx={ folder:0, title:1, game:2, time:3, q:4, choices:[5,6,7,8], ans:9, pick:10, mix:11, right:-1 };
     start=0;
   }
   const pairsMode = (idx.choices.length===0 && idx.right>=0);
   if(idx.q<0) throw new Error('ไม่พบคอลัมน์คำถาม');
 
   const map={}, order=[];
-  let cf='', ct='', cg='', cl=20, cp=0;
+  let cf='', ct='', cg='', cl=20, cp=0, cm=0;
   for(let r=start;r<rows.length;r++){
     const row=rows[r];
     const g=function(i){ return (i>=0 && i<row.length) ? norm(row[i]) : ''; };
@@ -3444,11 +3481,12 @@ function rowsToSets(rows){
     if(g(idx.game))   cg=g(idx.game);
     if(g(idx.time))   cl=Math.max(5, Math.min(120, parseInt(g(idx.time),10)||20));
     if(g(idx.pick))   cp=Math.max(0, parseInt(g(idx.pick),10)||0);
+    if(g(idx.mix))    cm=/ไม่/.test(g(idx.mix)) ? 2 : (/สลับ|yes|1/i.test(g(idx.mix)) ? 1 : 0);
 
     const key=(cf||UNSORTED)+'\u0000'+(ct||'ชุดจากไฟล์');
     if(!map[key]){
       map[key]={ folder:cf||UNSORTED, title:ct||'ชุดจากไฟล์',
-                 game:gameFromText(cg), timeLimit:cl, pick:cp, questions:[], pairs:[] };
+                 game:gameFromText(cg), timeLimit:cl, pick:cp, mix:cm, questions:[], pairs:[] };
       order.push(key);
     }
     const set=map[key];
@@ -3500,7 +3538,7 @@ function importSets(sets){
       id:'hq_'+(stamp+i), title:s.title, folder:s.folder,
       count:s.questions.length, updated:stamp+i,
       data:{ title:s.title, topic:s.folder, game:s.game, timeLimit:s.timeLimit,
-             pick:s.pick||0, shuffle:'no', questions:s.questions, pairs:s.pairs }
+             pick:s.pick||0, mixChoices:s.mix||0, shuffle:'no', questions:s.questions, pairs:s.pairs }
     });
   });
   if(!libSave(list)) return;
@@ -3530,7 +3568,7 @@ function downloadTemplate(){
   const rows=[
     SHEET_COLS,
     ['วิทยาศาสตร์ ป.5','ระบบสุริยะ','ยกมือตอบ','20',
-     'ดาวเคราะห์ดวงใดอยู่ใกล้ดวงอาทิตย์ที่สุด','ดาวพุธ','ดาวศุกร์','โลก','ดาวอังคาร','1','10'],
+     'ดาวเคราะห์ดวงใดอยู่ใกล้ดวงอาทิตย์ที่สุด','ดาวพุธ','ดาวศุกร์','โลก','ดาวอังคาร','1','10','สลับ'],
     ['วิทยาศาสตร์ ป.5','ระบบสุริยะ','ยกมือตอบ','20',
      'ดาวเคราะห์ดวงใดมีวงแหวนชัดเจนที่สุด','ดาวพฤหัส','ดาวเสาร์','ดาวยูเรนัส','','2'],
     ['ภาษาอังกฤษ ป.5','คำศัพท์บทที่ 1','จับคู่','20',
@@ -3555,7 +3593,7 @@ function downloadTemplate(){
    ตัวสร้างแบบฝึก และการสร้างลิงก์ให้นักเรียน
    ========================================================== */
 const E = { id:null, srvId:'', title:'', topic:'', folder:'', game:'quiz', timeLimit:20, shuffle:'no',
-            pick:0, mode:'mcq', questions:[], pairs:[] };
+            pick:0, mix:0, mode:'mcq', questions:[], pairs:[] };
 
 function newSet(){
   E.id=null; E.srvId=''; E.title=''; E.topic=''; E.folder='';
@@ -3576,7 +3614,7 @@ function openEditor(){
   folderNames().forEach(function(f){
     const o=document.createElement('option'); o.value=f.name; dl.appendChild(o);
   });
-  $('eGame').value=E.game; $('eTime').value=E.timeLimit; $('ePick').value=E.pick||0;
+  $('eGame').value=E.game; $('eTime').value=E.timeLimit; $('ePick').value=E.pick||0; $('eMix').value=E.mix||0;
   $('eShuffle').value=E.shuffle; $('eMode').value=E.mode;
   msg('eMsg','');
   renderEditor();
@@ -3667,6 +3705,7 @@ function readEditor(){
   E.game=$('eGame').value;
   E.timeLimit=Math.max(5, Math.min(120, +$('eTime').value||20));
   E.pick=Math.max(0, Math.min(500, +$('ePick').value||0));
+  E.mix=+$('eMix').value||0;
   E.shuffle=$('eShuffle').value;
   if(E.mode==='pairs'){
     E.pairs.forEach(function(p,i){
@@ -3729,6 +3768,7 @@ function buildSet(){
     game: E.game,
     timeLimit: E.timeLimit,
     pick: E.pick,
+    mixChoices: E.mix,
     shuffle: E.shuffle,
     questions: [],
     pairs: []
@@ -3863,7 +3903,7 @@ function b64dec(str){
 }
 function packSet(set){
   return {
-    t:set.title, o:set.topic||'', g:set.game, l:set.timeLimit, s:set.shuffle==='yes'?1:0, k:set.pick||0,
+    t:set.title, o:set.topic||'', g:set.game, l:set.timeLimit, s:set.shuffle==='yes'?1:0, k:set.pick||0, m:set.mixChoices||0,
     p:(set.pairs||[]).map(function(x){ return [x.left,x.right]; }),
     q:(set.questions||[]).map(function(x){
         return [x.text, x.correct|0].concat(x.choices.map(function(c){ return c.text; }));
@@ -3873,7 +3913,7 @@ function packSet(set){
 function unpackSet(o){
   return {
     title:o.t||'แบบฝึกจากลิงก์', topic:o.o||'', game:o.g||'quiz',
-    timeLimit:o.l||20, shuffle:o.s?'yes':'no', pick:o.k|0,
+    timeLimit:o.l||20, shuffle:o.s?'yes':'no', pick:o.k|0, mixChoices:o.m|0,
     pairs:(o.p||[]).map(function(a){ return { left:a[0], right:a[1] }; }),
     questions:(o.q||[]).map(function(a){
       return { text:a[0], correct:a[1]|0, image:'',
