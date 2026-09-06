@@ -399,6 +399,17 @@ tr.me td{color:#fff}
 .pick b{font-family:var(--display);font-size:17px}
 .pick span{color:var(--chalk-dim);font-size:13.5px;line-height:1.55}
 
+/* ---------- ชั้นวาดของเกมปลั๊กอิน ---------- */
+#gameLayer{position:absolute;inset:0;display:none;z-index:9}
+#gameLayer.on{display:block}
+.gamerow{display:flex;align-items:center;gap:12px;background:var(--ink);
+  border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.gamerow .t{flex:1;min-width:0}
+.gamerow .t b{display:block;font-family:var(--display);font-size:16px}
+.gamerow .t span{color:var(--chalk-dim);font-size:13px}
+.gamerow .src{font-size:12px;padding:3px 10px;border-radius:999px;background:var(--surface);color:var(--cyan)}
+.gamerow .src.plug{color:var(--amber)}
+
 /* ---------- หน้าตาแบบเป็นขั้นตอน ---------- */
 .step{position:relative;margin-top:18px}
 .step-h{display:flex;align-items:center;gap:12px;margin-bottom:12px}
@@ -584,16 +595,7 @@ details.more>summary:hover{color:var(--chalk)}
       <span class="sel" id="sel2"></span>
     </div>
     <div class="card" id="gamePick">
-      <div class="picks">
-        <button class="pick on" id="pickQuiz" onclick="setGame('quiz')">
-          <b>ยกมือตอบ</b><span>ชี้นิ้วไปที่คำตอบแล้วค้างไว้</span></button>
-        <button class="pick" id="pickMatch" onclick="setGame('match')">
-          <b>จับคู่</b><span>กำมือหยิบการ์ด แบมือวางลงช่อง</span></button>
-        <button class="pick" id="pickFace" onclick="setGame('face')">
-          <b>ยืนเลือกช่อง</b><span>เดินไปยืนในช่องคำตอบ</span></button>
-        <button class="pick" id="pickRun" onclick="setGame('run')">
-          <b>ด่านนั่งยืน</b><span>นั่งยืนหลบกำแพงแล้วตอบคำถาม</span></button>
-      </div>
+      <div class="picks" id="picks"></div>
       <p class="muted" style="margin-top:12px" id="gameNote"></p>
     </div>
   </div>
@@ -688,6 +690,21 @@ details.more>summary:hover{color:var(--chalk)}
   </div>
 
   <div class="card" style="margin-top:18px">
+    <h3 style="font-size:18px;margin-bottom:6px">เกมในระบบ</h3>
+    <p class="muted" style="margin-top:0">
+      เกมแยกเป็นไฟล์ละเกม เพิ่มหรือลบได้โดยไม่ต้องแก้ตัวเว็บ
+      ไฟล์ที่อัปโหลดที่นี่จะเก็บอยู่ในเครื่องนี้เท่านั้น ถ้าอยากให้ทุกเครื่องเห็น ให้เอาไฟล์ไปวางในโฟลเดอร์ games แล้วเพิ่มชื่อไฟล์ลงใน games.json บน GitHub
+    </p>
+    <div class="setlist" id="gameList"></div>
+    <div class="row" style="margin-top:14px">
+      <button class="ghost" onclick="document.getElementById('gameFile').click()">อัปโหลดไฟล์เกม .js</button>
+      <button class="ghost" onclick="downloadGameTemplate()">ดาวน์โหลดไฟล์ตัวอย่างไว้เขียนเกมใหม่</button>
+    </div>
+    <input type="file" id="gameFile" accept=".js,text/javascript" hidden>
+    <div class="notice" id="gameMsg"></div>
+  </div>
+
+  <div class="card" style="margin-top:18px">
     <h3 style="font-size:18px;margin-bottom:6px">ที่เก็บข้อสอบออนไลน์</h3>
     <p class="muted" style="margin-top:0">
       ใส่ลิงก์เว็บแอปจาก Google Apps Script ที่ลงท้ายด้วย /exec ข้อสอบที่บันทึกขึ้นออนไลน์จะไปเก็บที่นั่น
@@ -713,6 +730,7 @@ details.more>summary:hover{color:var(--chalk)}
    <video id="cam" playsinline muted autoplay></video>
    <div id="veil"></div>
    <div id="lanes"></div>
+   <div id="gameLayer"></div>
    <div id="runLayer"></div>
    <div id="midLine"></div>
    <div id="headMark"></div>
@@ -1284,7 +1302,7 @@ function jsonp(params, timeout){
     const t=setTimeout(()=>{ done(); rej(new Error('เซิร์ฟเวอร์ไม่ตอบกลับ ลองใหม่อีกครั้ง')); }, timeout||15000);
     function done(){ clearTimeout(t); try{ delete window[cb]; }catch(e){ window[cb]=undefined; } s.remove(); }
     window[cb]=d=>{ done(); (d&&d.ok) ? res(d) : rej(new Error((d&&d.error)||'เซิร์ฟเวอร์ตอบกลับผิดพลาด')); };
-    s.onerror=()=>{ done(); rej(new Error('เชื่อมต่อไม่ได้ ตรวจสอบลิงก์เว็บแอปและสิทธิ์การเข้าถึง')); };
+    s.onerror=()=>{ done(); rej(new Error('เชื่อมต่อไม่ได้ สาเหตุที่พบบ่อยคือยังไม่ได้ deploy โค้ดเวอร์ชันใหม่ หรือตอน deploy ไม่ได้เลือกผู้ที่มีสิทธิ์เข้าถึงเป็น ทุกคน')); };
     s.src=API.url+(API.url.indexOf('?')>=0?'&':'?')+q.toString();
     document.head.appendChild(s);
   });
@@ -1328,7 +1346,9 @@ async function testApi(){
   msg('apiMsg','กำลังทดสอบ…');
   try{ const d=await jsonp({action:'ping'});
     msg('apiMsg','เชื่อมต่อได้ มีห้องทั้งหมด '+(d.rooms||0)+' ห้อง','ok');
-  }catch(e){ msg('apiMsg',e.message,'err'); }
+  }catch(e){
+    msg('apiMsg', e.message + ' — ลองเปิดลิงก์นี้ในหน้าต่างไม่ระบุตัวตน ถ้าเจอหน้าให้ล็อกอินของกูเกิล แปลว่าสิทธิ์ยังไม่ใช่ ทุกคน ให้ deploy ใหม่','err');
+  }
 }
 
 /* ==========================================================
@@ -1365,7 +1385,9 @@ function loadTeacherSets(manual){
     if(manual) alert('โหลดข้อสอบจากครูแล้ว '+SERVER_SETS.length+' ชุด');
   }).catch(function(e){
     if(btn){ btn.disabled=false; btn.textContent='โหลดข้อสอบใหม่'; }
-    if(manual) alert('โหลดไม่สำเร็จ '+e.message);
+    if(manual) alert('โหลดไม่สำเร็จ\n\n'+e.message
+      +'\n\nวิธีตรวจ เปิดลิงก์ /exec ในแท็บใหม่ ถ้าเจอหน้าสีเข้มเขียนว่าทำงานปกติ แปลว่าโค้ดใหม่ขึ้นแล้ว'
+      +'\nถ้าเจอ error เรื่องไฟล์ Index แปลว่ายังไม่ได้ deploy เวอร์ชันใหม่');
   });
 }
 
@@ -1585,6 +1607,43 @@ function pickQuiz(data){
       + (use<tot ? ('มี '+tot+' ข้อ จะสุ่มมาถาม '+use+' ข้อ') : (tot+' ข้อ')),'ok');
 }
 function useSample(){ pickQuiz(SAMPLE); }
+document.getElementById('gameFile').addEventListener('change', function(e){
+  const f=e.target.files[0]; e.target.value='';
+  if(!f) return;
+  const r=new FileReader();
+  r.onload=function(){
+    const code=String(r.result||'');
+    const before=Object.keys(GAMES);
+    if(!runPluginCode(code, f.name)){
+      msg('gameMsg','ไฟล์นี้มีข้อผิดพลาด เปิดคอนโซลของเบราว์เซอร์ดูรายละเอียดได้','err');
+      return;
+    }
+    const added=Object.keys(GAMES).filter(function(k){ return before.indexOf(k)<0; });
+    if(!added.length){
+      msg('gameMsg','ไฟล์นี้ไม่ได้ลงทะเบียนเกมใหม่ ตรวจว่ามีการเรียก HandQuiz.registerGame หรือยัง','err');
+      return;
+    }
+    const plugs=(Store.get(K_PLUG,[])||[]).filter(function(p){ return added.indexOf(p.id)<0; });
+    added.forEach(function(id){ plugs.push({ id:id, name:GAMES[id].name, code:code }); });
+    if(!Store.set(K_PLUG, plugs)){ msg('gameMsg','พื้นที่ในเครื่องเต็ม','err'); return; }
+    renderGamePicks(); renderGameList();
+    msg('gameMsg','เพิ่มเกมแล้ว '+added.map(function(id){ return GAMES[id].name; }).join(', ')
+        +' เลือกเล่นได้ที่ขั้นตอนเลือกเกม','ok');
+  };
+  r.readAsText(f);
+});
+
+function downloadGameTemplate(){
+  const code = GAME_TEMPLATE;
+  const blob=new Blob([code],{type:'text/javascript'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='my-game.js';
+  a.click();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); },3000);
+  msg('gameMsg','ดาวน์โหลดไฟล์ตัวอย่างแล้ว แก้แล้วอัปโหลดกลับมาได้เลย','ok');
+}
+
 document.getElementById('eSheet').addEventListener('change', function(e){
   const f=e.target.files[0]; e.target.value='';
   if(!f) return;
@@ -1655,16 +1714,13 @@ function applySize(){
   if(v==='xl') st.classList.add('size-xl');
 }
 function setGame(g){
+  if(!GAMES[g]) g='quiz';
   G.game = g;
-  $('pickQuiz').classList.toggle('on', g==='quiz');
-  $('pickMatch').classList.toggle('on', g==='match');
-  $('pickFace').classList.toggle('on', g==='face');
-  $('pickRun').classList.toggle('on', g==='run');
-  $('gameNote').textContent =
-      g==='match' ? 'โหมดจับคู่ใช้ท่ามือ กำมือคือหยิบ แบมือคือวาง ท่าโอเคคือยืนยัน ชุดข้อสอบต้องมีคำถามที่มีคำตอบถูกอย่างน้อย 2 ข้อ'
-    : g==='face'  ? 'โหมดยืนเลือกช่องต้องมีที่ว่างให้เดินซ้ายขวาหน้ากล้อง ตั้งกล้องให้เห็นตัวตั้งแต่เอวขึ้นไป และควรเล่นทีละคนในกรอบภาพ'
-    : g==='run'   ? 'ด่านนั่งยืนต้องมีที่ให้ย่อตัวลงและยืนขึ้นได้เต็มที่ ตั้งกล้องให้เห็นตัวตั้งแต่เข่าขึ้นไป ตอนเริ่มเกมจะให้ยืนนิ่งสองวินาทีเพื่อจำระดับหัว'
-    : '';
+  document.querySelectorAll('#picks .pick').forEach(function(b){
+    b.classList.toggle('on', b.dataset.g===g);
+  });
+  const d=GAMES[g];
+  $('gameNote').textContent = (d && d.note) || '';
   Store.set(K_GAME, g);
   refreshSteps();
 }
@@ -1992,7 +2048,7 @@ async function startHand(){
   v.srcObject=Hand.stream;
   try{ await v.play(); }catch(e){}
   try{
-    if(G.game==='face'||G.game==='run'){ await loadFace(); setMode('face',''); }
+    if(gameTracker()==='face'){ await loadFace(); setMode('face',''); }
     else { await loadModel(); setMode('hand',''); }
     Hand.ready=true;
   }catch(e){
@@ -2021,7 +2077,7 @@ async function runTest(){
   const btn=$('btnTest'); btn.disabled=true; btn.textContent='กำลังตรวจ…';
   setCamLine('run','กำลังเปิดกล้อง…');
   showFrameFix();
-  const faceGame = (G.game==='face'||G.game==='run');
+  const faceGame = (gameTracker()==='face');
   const lastRow=document.querySelector('#diagList li[data-k="hand"] .t');
   if(lastRow) lastRow.textContent = faceGame ? 'มองเห็นใบหน้า' : 'มองเห็นมือ';
   const libRow=document.querySelector('#diagList li[data-k="lib"] .t');
@@ -2086,7 +2142,7 @@ async function runTest(){
 function testLoop(){
   testRaf=requestAnimationFrame(testLoop);
   const v=$('pvVideo'), c=$('pvCanvas');
-  const faceGame=(G.game==='face'||G.game==='run');
+  const faceGame=(gameTracker()==='face');
   if(v.readyState<2) return;
   if(!(faceGame ? Face.model : Hand.model)) return;
   if(c.width!==v.videoWidth){ c.width=v.videoWidth; c.height=v.videoHeight; }
@@ -2237,6 +2293,12 @@ function loop(t){
   rafId=requestAnimationFrame(loop);
   const dt=Math.min(50, t-(lastT||t)); lastT=t;
 
+  if(isPlugin() && $('scr-play').classList.contains('show')){
+    pluginFrame(dt);
+    tickClock(dt);
+    return;
+  }
+
   if((G.game==='face'||G.game==='run') && $('scr-play').classList.contains('show')){
     $('cursor').classList.remove('on');
     if(G.phase==='calib')    calibFrame(dt);
@@ -2347,6 +2409,243 @@ $('stage').addEventListener('pointerdown', e=>{
   Hand.sx=e.clientX; Hand.sy=e.clientY;
 });
 
+const GAME_TEMPLATE = "/* =========================================================\n   ตัวอย่างไฟล์เกม ยิงลูกโป่ง\n   ก๊อปไฟล์นี้ไปแก้เป็นเกมของคุณเองได้เลย\n\n   วิธีใช้ สองทาง\n   1. หน้าสำหรับครู กดอัปโหลดไฟล์เกม .js  เก็บในเครื่องนี้เครื่องเดียว\n   2. เอาไฟล์ไปวางในโฟลเดอร์ games บน GitHub แล้วเพิ่มชื่อไฟล์ลงใน games.json\n      แบบนี้ทุกเครื่องจะได้เกมนี้เหมือนกัน\n\n   สิ่งที่แกนหลักจัดการให้แล้ว ไม่ต้องเขียนเอง\n   กล้อง การอ่านมือและใบหน้า การสุ่มข้อ การสลับตัวเลือก\n   เวลานับถอยหลัง คะแนน เสียง หน้าสรุปผล\n   หน้าที่ของไฟล์เกมคือ วาดตัวเลือกและตัดสินใจว่าผู้เล่นเลือกข้อไหน\n   ========================================================= */\n\n(function () {\n\n  /* ใส่สไตล์ของเกมนี้ครั้งเดียว */\n  if (!document.getElementById('balloon-style')) {\n    var st = document.createElement('style');\n    st.id = 'balloon-style';\n    st.textContent = [\n      '.hq-balloon{--p:0;position:absolute;left:0;top:0;padding:18px 22px;border-radius:50% 50% 46% 46%;',\n      '  min-width:150px;max-width:34vw;text-align:center;line-height:1.3;',\n      '  font-size:clamp(16px,2.2vw,24px);color:#101736;font-weight:600;',\n      '  background:#FBBF24;border:3px solid rgba(255,255,255,.55);',\n      '  box-shadow:0 10px 26px rgba(7,11,28,.45);will-change:transform}',\n      '.hq-balloon::after{content:\"\";position:absolute;left:50%;bottom:-14px;width:2px;height:14px;',\n      '  background:rgba(255,255,255,.6)}',\n      '.hq-balloon.c1{background:#22D3EE}.hq-balloon.c2{background:#34D399}',\n      '.hq-balloon.c3{background:#FF6B5B}.hq-balloon.c0{background:#FBBF24}',\n      '.hq-balloon .fill{position:absolute;inset:0;border-radius:inherit;',\n      '  background:rgba(16,23,54,.45);transform:scaleY(var(--p));transform-origin:bottom}',\n      '.hq-balloon.hot{border-color:#F2EFE6}'\n    ].join('');\n    document.head.appendChild(st);\n  }\n\n  HandQuiz.registerGame({\n    /* ---------- ข้อมูลของเกม ---------- */\n    id: 'balloon',                 // ห้ามซ้ำกับเกมอื่น\n    name: 'ยิงลูกโป่ง',\n    desc: 'ลูกโป่งลอยขึ้น ชี้ค้างที่ใบที่ถูก',\n    tracker: 'hand',               // 'hand' ใช้การอ่านมือ หรือ 'face' ใช้ใบหน้า\n    note: 'ลูกโป่งจะลอยขึ้นเรื่อย ๆ ชี้นิ้วไปที่ใบที่ตอบถูกแล้วค้างไว้จนเต็ม',\n\n    /* ---------- เรียกครั้งเดียวตอนขึ้นข้อใหม่ ----------\n       ctx.q         คำถามข้อนี้  { text, choices:[{text}], correct }\n       ctx.layer     กล่องว่างสำหรับวางของ ล้างให้ทุกข้อแล้ว\n       ctx.W, ctx.H  ขนาดจอเป็นพิกเซล\n       ctx.letters   ['ก','ข','ค','ง']                                  */\n    render: function (ctx) {\n      var n = ctx.q.choices.length;\n      var self = this;\n      this.items = ctx.q.choices.map(function (c, i) {\n        var el = HandQuiz.el('div', 'hq-balloon c' + (i % 4));\n        var fill = HandQuiz.el('div', 'fill');\n        el.appendChild(fill);\n        el.appendChild(document.createTextNode(ctx.letters[i] + '  ' + (c.text || '')));\n        ctx.layer.appendChild(el);\n        return {\n          el: el, i: i,\n          x: (i + 0.5) / n * ctx.W,\n          y: ctx.H + 120 + Math.random() * 260,\n          sp: 42 + Math.random() * 26,          // ความเร็วลอยขึ้น พิกเซลต่อวินาที\n          drift: (Math.random() - 0.5) * 18     // ส่ายซ้ายขวา\n        };\n      });\n      this.t = 0;\n    },\n\n    /* ---------- เรียกทุกเฟรม ----------\n       dt            เวลาที่ผ่านไปเป็นมิลลิวินาที\n       ctx.input     { seen, x, y, grip, pinch, kind }\n                     grip เป็น 'open' 'fist' 'ok' หรือ 'mid'\n       ctx.hit(el)   จุดของผู้เล่นทับ el อยู่ไหม เผื่อขอบให้แล้ว\n       ctx.dwell(k,on,dt)  นับเวลาค้าง คืนค่า 0 ถึง 1 ครบเมื่อได้ 1\n       ctx.answer(i) ตอบข้อที่ i แกนหลักจะตรวจ ให้คะแนน แล้วไปข้อต่อไปเอง  */\n    frame: function (ctx, dt) {\n      this.t += dt;\n      var self = this;\n      this.items.forEach(function (b) {\n        b.y -= b.sp * dt / 1000;\n        if (b.y < -160) b.y = ctx.H + 140;      // ลอยพ้นจอแล้ววนกลับมาใหม่\n        var wob = Math.sin((self.t + b.i * 700) / 900) * b.drift;\n        b.el.style.transform = 'translate(' + (b.x + wob) + 'px,' + b.y + 'px) translate(-50%,-50%)';\n\n        var over = ctx.hit(b.el);\n        var p = ctx.dwell('b' + b.i, over, dt);\n        b.el.classList.toggle('hot', over);\n        b.el.style.setProperty('--p', over ? p.toFixed(3) : 0);\n\n        // ถ้าอยากให้หยิกนิ้วแล้วตอบทันที ใช้บรรทัดนี้แทน\n        // if (over && ctx.input.grip === 'ok') ctx.answer(b.i);\n        if (p >= 1) ctx.answer(b.i);\n      });\n    },\n\n    /* ---------- เรียกหลังตอบ จะใส่หรือไม่ใส่ก็ได้ ----------\n       right บอกว่าตอบถูกไหม  i คือข้อที่ตอบ ถ้าหมดเวลาจะเป็น -1 */\n    judged: function (ctx, i, right) {\n      this.items.forEach(function (b) {\n        if (b.i === ctx.q.correct) b.el.style.borderColor = '#34D399';\n        else if (b.i === i) b.el.style.opacity = '.35';\n      });\n    },\n\n    /* ---------- เรียกตอนออกจากเกม จะใส่หรือไม่ใส่ก็ได้ ---------- */\n    stop: function (ctx) {\n      this.items = [];\n    }\n  });\n\n})();\n";
+
+/* ==========================================================
+   ทะเบียนเกม เกมแต่ละเกมเป็นไฟล์แยก เพิ่มหรือลบได้ตลอด
+   ========================================================== */
+const K_PLUG='handquiz:plugins';
+const GAMES={};
+
+function registerGame(def){
+  if(!def || !def.id){ console.warn('เกมนี้ไม่มี id'); return; }
+  GAMES[def.id]=Object.assign({ tracker:'hand', name:def.id, desc:'', note:'' }, def);
+  GAME_NAME[def.id]=GAMES[def.id].name;
+  if(document.getElementById('picks')) renderGamePicks();
+}
+function gameDef(){ return GAMES[G.game] || GAMES.quiz; }
+function gameTracker(){ const d=gameDef(); return d ? d.tracker : 'hand'; }
+function isPlugin(){ const d=gameDef(); return !!(d && !d.builtin); }
+
+/* เกมที่มากับตัวเว็บ */
+registerGame({id:'quiz', builtin:true, tracker:'hand', name:'ยกมือตอบ',
+  desc:'ชี้นิ้วไปที่คำตอบแล้วค้างไว้'});
+registerGame({id:'match', builtin:true, tracker:'hand', name:'จับคู่',
+  desc:'กำมือหยิบการ์ด แบมือวางลงช่อง',
+  note:'โหมดจับคู่ใช้ท่ามือ กำมือคือหยิบ แบมือคือวาง ท่าโอเคคือยืนยัน ต้องมีคำถามอย่างน้อย 2 ข้อ'});
+registerGame({id:'face', builtin:true, tracker:'face', name:'ยืนเลือกช่อง',
+  desc:'เดินไปยืนในช่องคำตอบ',
+  note:'ต้องมีที่ว่างให้เดินซ้ายขวาหน้ากล้อง ตั้งกล้องให้เห็นตัวตั้งแต่เอวขึ้นไป'});
+registerGame({id:'run', builtin:true, tracker:'face', name:'ด่านนั่งยืน',
+  desc:'นั่งยืนหลบกำแพงแล้วตอบคำถาม',
+  note:'ต้องมีที่ให้ย่อตัวและยืนขึ้นได้เต็มที่ ตอนเริ่มจะให้ยืนนิ่งสองวินาทีเพื่อจำระดับหัว'});
+
+function renderGamePicks(){
+  const box=$('picks'); if(!box) return;
+  box.innerHTML='';
+  Object.keys(GAMES).forEach(function(id){
+    const d=GAMES[id];
+    const b=document.createElement('button');
+    b.className='pick'+(id===G.game?' on':'');
+    b.dataset.g=id;
+    const t=document.createElement('b'); t.textContent=d.name;
+    const sp=document.createElement('span'); sp.textContent=d.desc||'';
+    b.appendChild(t); b.appendChild(sp);
+    b.onclick=function(){ setGame(id); };
+    box.appendChild(b);
+  });
+}
+
+/* ---------- โหลดไฟล์เกม ---------- */
+function loadScript(src){
+  return new Promise(function(res){
+    const el=document.createElement('script');
+    el.src=src; el.onload=res; el.onerror=function(){ console.warn('โหลดเกมไม่ได้',src); res(); };
+    document.head.appendChild(el);
+  });
+}
+function runPluginCode(code, name){
+  try{ (new Function(code))(); return true; }
+  catch(e){ console.error('ไฟล์เกม '+name+' มีปัญหา', e); return false; }
+}
+async function loadGames(){
+  try{
+    const r=await fetch('games.json',{cache:'no-store'});
+    if(r.ok){
+      const d=await r.json();
+      const list=Array.isArray(d) ? d : (d.games||[]);
+      for(let i=0;i<list.length;i++){ await loadScript(list[i]); }
+    }
+  }catch(e){}
+  (Store.get(K_PLUG,[])||[]).forEach(function(p){ runPluginCode(p.code, p.name); });
+  renderGamePicks();
+  renderGameList();
+}
+
+/* ---------- หน้าจัดการเกมของครู ---------- */
+function renderGameList(){
+  const box=$('gameList'); if(!box) return;
+  const plugs=Store.get(K_PLUG,[])||[];
+  box.innerHTML='';
+  Object.keys(GAMES).forEach(function(id){
+    const d=GAMES[id];
+    const row=document.createElement('div'); row.className='gamerow';
+    const t=document.createElement('div'); t.className='t';
+    const b=document.createElement('b'); b.textContent=d.name;
+    const sp=document.createElement('span'); sp.textContent=(d.desc||'')+' • ใช้'+(d.tracker==='face'?'ใบหน้า':'มือ');
+    t.appendChild(b); t.appendChild(sp);
+    const src=document.createElement('span'); src.className='src'+(d.builtin?'':' plug');
+    src.textContent=d.builtin?'มากับตัวเว็บ':'ไฟล์เกม';
+    row.appendChild(t); row.appendChild(src);
+    const mine=plugs.filter(function(p){ return p.id===id; })[0];
+    if(mine){
+      const del=document.createElement('button'); del.className='ghost mini'; del.textContent='ลบ';
+      del.onclick=function(){ removePlugin(id); };
+      row.appendChild(del);
+    }
+    box.appendChild(row);
+  });
+}
+function removePlugin(id){
+  if(!confirm('ลบเกมนี้ออกจากเครื่องนี้ใช่หรือไม่ ต้องรีเฟรชหน้าหนึ่งครั้ง')) return;
+  const plugs=(Store.get(K_PLUG,[])||[]).filter(function(p){ return p.id!==id; });
+  Store.set(K_PLUG, plugs);
+  delete GAMES[id];
+  if(G.game===id) setGame('quiz');
+  renderGamePicks(); renderGameList();
+  msg('gameMsg','ลบแล้ว','ok');
+}
+
+/* ==========================================================
+   สิ่งที่เกมปลั๊กอินเรียกใช้ได้ ตัวกลางระหว่างเกมกับแกนหลัก
+   ========================================================== */
+const CTX = {
+  layer:null, stage:null, cfg:CFG, sound:null, letters:LETTERS,
+  q:null, index:0, total:0, timeLeft:0, limit:0, input:{},
+  W:0, H:0,
+  answer:function(i){ pluginAnswer(i); },
+  addScore:function(n){ G.score+=(n|0); $('hScore').textContent=G.score; },
+  say:function(text,color){
+    const v=$('verdict'); v.textContent=text||''; v.style.color=color||'var(--chalk)';
+    v.classList.toggle('show', !!text);
+  },
+  hit:function(el, pad){
+    if(!el || !this.input.seen) return false;
+    const r=el.getBoundingClientRect(), k=(pad==null?HIT_PAD:pad);
+    return this.input.x>=r.left-k && this.input.x<=r.right+k
+        && this.input.y>=r.top-k  && this.input.y<=r.bottom+k;
+  },
+  dwell:function(key, on, dt){
+    if(!on){ this._dw[key]=0; return 0; }
+    this._dw[key]=(this._dw[key]||0)+dt;
+    if(this._dw[key]>=DWELL){ this._dw[key]=0; return 1; }
+    return this._dw[key]/DWELL;
+  },
+  _dw:{}
+};
+
+function pluginInput(dt){
+  const st=$('stage');
+  const inp={ kind:Hand.mode, seen:false, x:0, y:0, grip:'none', pinch:false,
+              W:st.clientWidth, H:st.clientHeight };
+  if(gameTracker()==='face'){
+    const h=trackHead(dt);
+    if(h){ inp.seen=true; inp.x=h.x; inp.y=h.y; }
+    return inp;
+  }
+  if(Hand.mode==='hand'){
+    readHand();
+    const fresh = Hand.seen && (performance.now()-Hand.lastSeen < 350);
+    if(fresh){
+      Hand.sx = Hand.sx ? Hand.sx+(Hand.x-Hand.sx)*.35 : Hand.x;
+      Hand.sy = Hand.sy ? Hand.sy+(Hand.y-Hand.sy)*.35 : Hand.y;
+    }
+    inp.seen=fresh; inp.x=Hand.sx; inp.y=Hand.sy;
+    inp.grip=Hand.grip; inp.pinch=Hand.pinch;
+  }else{
+    inp.seen=true; inp.x=Hand.sx||inp.W/2; inp.y=Hand.sy||inp.H/2;
+  }
+  return inp;
+}
+
+function pluginFrame(dt){
+  const d=gameDef();
+  CTX.input=pluginInput(dt);
+  CTX.W=CTX.input.W; CTX.H=CTX.input.H;
+  CTX.timeLeft=G.timeLeft; CTX.limit=G.limit;
+  setCursor(CTX.input.x, CTX.input.y, CTX.input.seen && gameTracker()!=='face');
+  if(G.phase!=='question') return;
+  try{ if(d.frame) d.frame(CTX, dt); }catch(e){ console.error(e); }
+}
+
+function pluginShow(){
+  const d=gameDef();
+  G.phase='question'; G.locked=false;
+  G.limit=baseTime(); G.timeLeft=G.limit;
+  const q=quiz.questions[G.order[G.idx]];
+  CTX.q=q; CTX.index=G.idx; CTX.total=G.order.length;
+  CTX.layer=$('gameLayer'); CTX.stage=$('stage'); CTX.sound=S; CTX._dw={};
+
+  $('hQnum').textContent=G.idx+1;
+  $('qtext').textContent=q.text||'';
+  const im=$('qimg');
+  if(q.image){ im.src=q.image; im.style.display='block'; } else { im.style.display='none'; }
+  $('answers').innerHTML=''; $('answers').className='';
+  $('matchWrap').classList.remove('on');
+  $('lanes').className='';
+  $('verdict').classList.remove('show'); $('gain').classList.remove('show');
+  $('btnSkip').classList.remove('off'); $('btnSkip').style.visibility='visible';
+  const layer=$('gameLayer');
+  layer.innerHTML=''; layer.classList.add('on');
+  updateTimer(1);
+  try{ if(d.render) d.render(CTX); }catch(e){ console.error(e); }
+}
+
+function pluginAnswer(i){
+  if(G.phase!=='question'||G.locked) return;
+  G.locked=true; G.phase='feedback';
+  const d=gameDef(), q=CTX.q, right=(i===q.correct);
+  let gained=0;
+  if(right){
+    gained=pointsFor(G.timeLeft);
+    G.score+=gained; G.correct++; G.streak++; S.right();
+  }else{
+    G.streak=0; S.wrong();
+  }
+  $('hScore').textContent=G.score;
+  $('hStreak').style.display = G.streak>=2 ? '' : 'none';
+  $('hStreakN').textContent=G.streak;
+  const v=$('verdict');
+  v.textContent = right ? 'ถูกต้อง'
+    : (i<0 ? 'หมดเวลา — คำตอบคือข้อ '+LETTERS[q.correct]
+           : 'คำตอบคือข้อ '+LETTERS[q.correct]);
+  v.style.color = right ? 'var(--mint)' : (i<0 ? 'var(--amber)' : 'var(--rose)');
+  v.classList.add('show');
+  if(gained){ const g=$('gain'); g.textContent='+'+gained; g.classList.add('show'); }
+  $('btnSkip').classList.add('off'); $('btnSkip').style.visibility='hidden';
+  updateTimer(0);
+  try{ if(d.judged) d.judged(CTX, i, right); }catch(e){}
+  setTimeout(nextQuestion, right?1500:2100);
+}
+
+function pluginCleanup(){
+  const d=gameDef();
+  try{ if(d && d.stop) d.stop(CTX); }catch(e){}
+  const l=$('gameLayer'); if(l){ l.innerHTML=''; l.classList.remove('on'); }
+}
+
+/* ให้ไฟล์เกมภายนอกเรียกใช้ */
+window.HandQuiz = {
+  version: 1,
+  registerGame: registerGame,
+  el: function(tag, cls, text){
+    const e=document.createElement(tag);
+    if(cls) e.className=cls;
+    if(text!=null) e.textContent=text;
+    return e;
+  }
+};
+
 /* ==========================================================
    ตัวเกม
    ========================================================== */
@@ -2372,6 +2671,7 @@ async function beginGame(){
 
   $('lanes').className='';
   $('lanes').innerHTML='';
+  pluginCleanup();
   $('dropLayer').innerHTML='';
   $('hClock').classList.remove('on','hot');
   $('headMark').classList.remove('on');
@@ -2394,7 +2694,7 @@ async function beginGame(){
     $('hUnit').textContent='ชุดที่';
     $('hQtot').textContent=G.rounds.length;
   }else{
-    if(G.game==='face'||G.game==='run'){
+    if(gameTracker()==='face' || isPlugin()){
       const bad=quiz.questions.filter(q=>q.choices.length<2).length;
       if(bad===quiz.questions.length){
         alert('ชุดนี้ใช้โหมดนี้ไม่ได้ ต้องมีตัวเลือกอย่างน้อย 2 ข้อ');
@@ -2526,6 +2826,7 @@ function answer(i){
 }
 function timeUp(){
   if(G.phase!=='question') return;
+  if(isPlugin()){ pluginAnswer(-1); return; }
   if(G.game==='match'){ finishRound('time'); return; }
   if(G.game==='face'||G.game==='run'){ lockFace(); return; }
   G.locked=true; G.phase='feedback'; G.streak=0;
@@ -2544,12 +2845,14 @@ function timeUp(){
 function skipQuestion(){
   if(G.game==='run' && G.phase==='run'){ toQuestion(); return; }
   if(G.phase!=='question') return;
+  if(isPlugin()){ pluginAnswer(-1); return; }
   G.timeLeft=0;
   if(G.game==='match'){ finishRound('skip'); return; }
   if(G.game==='face'||G.game==='run'){ lockFace(); return; }
   timeUp();
 }
 function startUnit(){
+  if(isPlugin()) return pluginShow();
   if(G.game==='match') return showRound();
   if(G.game==='face')  return showFaceQuestion();
   if(G.game==='run')   return Run.mid ? startRunPhase() : startCalib();
@@ -3268,6 +3571,7 @@ function endGame(reason){
   msg('upMsg','');
   $('lanes').className='';
   $('headMark').classList.remove('on');
+  pluginCleanup();
   $('hClock').classList.remove('on','hot');
   $('hHearts').classList.remove('on');
   $('midLine').classList.remove('on');
@@ -3296,6 +3600,7 @@ async function submitScore(secs){
 
 function quitGame(){
   dropCarried();
+  pluginCleanup();
   Run.walls.forEach(function(w){ w.el.remove(); });
   Run.drops.forEach(function(o){ o.el.remove(); });
   Run.walls=[]; Run.drops=[];
@@ -4043,6 +4348,7 @@ function loadFromHash(){
   refreshApiState();
 
   renderSets();
+  loadGames();
   if(API.url) loadTeacherSets(false);
   if(inFrame() && $('frameFix')) $('frameFix').classList.add('show');
   HIT_PAD = CFG.hitPad;
