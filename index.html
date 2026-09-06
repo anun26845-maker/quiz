@@ -521,7 +521,7 @@ details.more>summary:hover{color:var(--chalk)}
        <h3>เริ่มทำข้อสอบ</h3>
        <span>เลือกข้อสอบ เลือกเกม เปิดกล้อง แล้วเริ่มเล่น</span>
      </button>
-     <button class="mode" onclick="show('scr-teach')">
+     <button class="mode" onclick="refreshApiState(); show('scr-teach')">
        <span class="pill" style="color:var(--mint)">ครู</span>
        <h3>สำหรับครู</h3>
        <span>สร้างข้อสอบ ตั้งค่าความยาก และเชื่อมต่อที่เก็บข้อสอบออนไลน์</span>
@@ -694,7 +694,9 @@ details.more>summary:hover{color:var(--chalk)}
       นักเรียนทุกเครื่องจึงเห็นชุดเดียวกัน ถ้าตั้งไว้ในไฟล์ config.js แล้ว ช่องนี้จะขึ้นให้เอง
     </p>
     <div class="field"><label for="fApi">ลิงก์ /exec</label>
-      <input id="fApi" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off"></div>
+      <input id="fApi" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off"
+             onchange="saveApi()"></div>
+    <p class="muted" id="apiState2" style="margin:-6px 0 14px;word-break:break-all"></p>
     <div class="row">
       <button class="ghost" onclick="saveApi()">บันทึกลิงก์</button>
       <button class="ghost" onclick="testApi()">ทดสอบการเชื่อมต่อ</button>
@@ -1300,8 +1302,14 @@ async function apiPost(payload){
   return d;
 }
 function refreshApiState(){
-  $('apiState').textContent = API.url ? 'ต่อกับเซิร์ฟเวอร์ห้องแข่งแล้ว' : 'ยังไม่ได้ต่อเซิร์ฟเวอร์ — เล่นโหมดฝึกซ้อมได้เลย';
-  $('fApi').value = API.url;
+  const txt = API.url ? 'ต่อกับที่เก็บข้อสอบแล้ว' : 'ยังไม่ได้ต่อที่เก็บข้อสอบ ใช้ชุดในเครื่องได้';
+  const a=$('apiState'); if(a) a.textContent=txt;
+  const b=$('apiState2');
+  if(b){
+    b.textContent = API.url ? ('ตอนนี้ต่ออยู่กับ '+API.url) : 'ยังไม่ได้ใส่ลิงก์';
+    b.style.color = API.url ? 'var(--mint)' : 'var(--chalk-dim)';
+  }
+  const f=$('fApi'); if(f) f.value = API.url;
 }
 function saveApi(){
   const v=$('fApi').value.trim();
@@ -1309,7 +1317,12 @@ function saveApi(){
     msg('apiMsg','ลิงก์ควรเริ่มด้วย https://script.google.com/macros/s/ และลงท้ายด้วย /exec','warn'); return;
   }
   API.url=v; Store.set(K_API,v); refreshApiState();
-  msg('apiMsg', v? 'บันทึกที่อยู่แล้ว':'ล้างที่อยู่แล้ว','ok');
+  if(v){
+    msg('apiMsg','บันทึกลิงก์แล้ว จำไว้ให้ในเครื่องนี้ กำลังโหลดข้อสอบ…','ok');
+    loadTeacherSets(false);
+  }else{
+    msg('apiMsg','ล้างลิงก์แล้ว','ok');
+  }
 }
 async function testApi(){
   msg('apiMsg','กำลังทดสอบ…');
@@ -4021,8 +4034,16 @@ function loadFromHash(){
 (function init(){
   const p=new URLSearchParams(location.search);
 
+  // ลำดับ ลิงก์ที่แนบมากับ URL ก่อน แล้วค่อยไฟล์ config.js แล้วค่อยค่าที่เคยบันทึกไว้ในเครื่อง
+  if(p.get('api')){
+    API.url=String(p.get('api')).trim(); Store.set(K_API,API.url);
+  }else if(window.HANDQUIZ_API && String(window.HANDQUIZ_API).trim()){
+    API.url=String(window.HANDQUIZ_API).trim(); Store.set(K_API,API.url);
+  }
+  refreshApiState();
+
   renderSets();
-  loadTeacherSets(false);
+  if(API.url) loadTeacherSets(false);
   if(inFrame() && $('frameFix')) $('frameFix').classList.add('show');
   HIT_PAD = CFG.hitPad;
   fillCfg();
