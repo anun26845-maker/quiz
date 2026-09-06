@@ -399,6 +399,18 @@ tr.me td{color:#fff}
 .pick b{font-family:var(--display);font-size:17px}
 .pick span{color:var(--chalk-dim);font-size:13.5px;line-height:1.55}
 
+/* ---------- โหมดคุมสอบ ---------- */
+body.exam{user-select:none;-webkit-user-select:none}
+#examWall{position:fixed;inset:0;z-index:9999;display:none;place-items:center;
+  background:rgba(16,23,54,.97);backdrop-filter:blur(10px);text-align:center;padding:28px}
+#examWall.on{display:grid}
+#examWall .w{max-width:520px}
+#examWall h2{font-size:clamp(24px,4vw,34px);color:var(--rose);margin-bottom:10px}
+#examWall p{color:var(--chalk-dim);font-size:15.5px;line-height:1.7;margin:0 0 8px}
+#examWall b{color:var(--amber);font-family:var(--display);font-size:20px}
+#examWall button{margin-top:20px;font-size:18px;padding:16px 30px}
+.leavebadge{color:var(--rose)}
+
 /* ---------- ชั้นวาดของเกมปลั๊กอิน ---------- */
 #gameLayer{position:absolute;inset:0;display:none;z-index:9}
 #gameLayer.on{display:block}
@@ -532,7 +544,7 @@ details.more>summary:hover{color:var(--chalk)}
        <h3>เริ่มทำข้อสอบ</h3>
        <span>เลือกข้อสอบ เลือกเกม เปิดกล้อง แล้วเริ่มเล่น</span>
      </button>
-     <button class="mode" onclick="refreshApiState(); show('scr-teach')">
+     <button class="mode" onclick="openTeach()">
        <span class="pill" style="color:var(--mint)">ครู</span>
        <h3>สำหรับครู</h3>
        <span>สร้างข้อสอบ ตั้งค่าความยาก และเชื่อมต่อที่เก็บข้อสอบออนไลน์</span>
@@ -723,6 +735,13 @@ details.more>summary:hover{color:var(--chalk)}
   </div>
  </div>
 </section>
+
+<div id="examWall"><div class="w">
+  <h2>ออกจากหน้าทำข้อสอบ</h2>
+  <p>ระบบหยุดเวลาไว้ให้แล้ว กดปุ่มด้านล่างเพื่อกลับเข้าทำข้อสอบต่อ</p>
+  <p>ออกไปแล้ว <b id="examCount">1</b> ครั้ง ครูจะเห็นจำนวนครั้งนี้ในหน้าสรุปผล</p>
+  <button class="primary" onclick="examResume()">กลับเข้าทำข้อสอบ</button>
+</div></div>
 
 <!-- ============ สนามเล่น ============ -->
 <section id="scr-play" class="screen">
@@ -934,6 +953,15 @@ details.more>summary:hover{color:var(--chalk)}
         <input id="cfg_timeLimit" type="number" min="0" max="120"></div>
       <div class="field"><label for="cfg_pickCount">สุ่มมาถามกี่ข้อ (0 = ถามทั้งหมด)</label>
         <input id="cfg_pickCount" type="number" min="0" max="500"></div>
+      <div class="field"><label for="cfg_examLock">โหมดคุมสอบ</label>
+        <select id="cfg_examLock">
+          <option value="1">เปิด — เต็มจอ ห้ามคัดลอก และเตือนเมื่อสลับหน้าต่าง</option>
+          <option value="0">ปิด</option>
+        </select></div>
+      <div class="field"><label for="cfg_leaveLimit">ออกจากหน้าจอได้กี่ครั้งก่อนตัดจบ (0 = ไม่ตัด)</label>
+        <input id="cfg_leaveLimit" type="number" min="0" max="20"></div>
+      <div class="field"><label for="cfg_teachPin">รหัสล็อกหน้าสำหรับครู (เว้นว่าง = ไม่ล็อก)</label>
+        <input id="cfg_teachPin" type="text" inputmode="numeric" autocomplete="off" placeholder="เช่น 2569"></div>
       <div class="field"><label for="cfg_shuffleChoices">สลับตัวเลือกในแต่ละข้อ</label>
         <select id="cfg_shuffleChoices">
           <option value="1">สลับ — กันเด็กจำว่าข้อนี้ตอบเลขอะไร</option>
@@ -1151,6 +1179,7 @@ function show(id){
    ========================================================== */
 const CFG_DEFAULT = {
   timeLimit:0, shuffle:'auto', pickCount:0, shuffleChoices:1,
+  examLock:1, leaveLimit:3, teachPin:'',
   base:100, speedBonus:80, streakStep:20, streakMax:100,
   dwell:900, hitPad:26, gripFrames:3,
   matchPairs:4, matchTimeFactor:0.7,
@@ -1726,6 +1755,18 @@ function setGame(g){
 }
 
 /* อัปเดตหัวข้อสามขั้นตอน ให้เห็นว่าเลือกอะไรไปแล้วและเหลืออะไร */
+/* ล็อกหน้าสำหรับครูด้วยรหัส นักเรียนจะเข้าไม่ได้ */
+function openTeach(){
+  const pin=String(CFG.teachPin||'').trim();
+  if(pin){
+    const v=prompt('หน้านี้สำหรับครู ใส่รหัสเพื่อเข้า');
+    if(v===null) return;
+    if(String(v).trim()!==pin){ alert('รหัสไม่ถูกต้อง'); return; }
+  }
+  refreshApiState();
+  show('scr-teach');
+}
+
 function refreshSteps(){
   if(!$('step1')) return;
   const hasQuiz = !!(quiz && quiz.questions && quiz.questions.length);
@@ -2292,6 +2333,7 @@ function clearHot(){
 function loop(t){
   rafId=requestAnimationFrame(loop);
   const dt=Math.min(50, t-(lastT||t)); lastT=t;
+  if(Exam.paused) return;
 
   if(isPlugin() && $('scr-play').classList.contains('show')){
     pluginFrame(dt);
@@ -2647,6 +2689,86 @@ window.HandQuiz = {
 };
 
 /* ==========================================================
+   โหมดคุมสอบ กันนักเรียนสลับหน้าต่างไปหาเฉลย
+   ทำได้แค่ในระดับหน้าเว็บ ถ้าจะกันจริงจังต้องใช้โหมดคีออสก์ของเครื่องด้วย
+   ========================================================== */
+const Exam = { on:false, leaves:0, paused:false };
+
+function examOn(){
+  Exam.on = !!CFG.examLock;
+  Exam.leaves = 0; Exam.paused = false;
+  if(!Exam.on) return;
+  document.body.classList.add('exam');
+  goFullscreen();
+  document.addEventListener('visibilitychange', examLeave);
+  window.addEventListener('blur', examLeave);
+  document.addEventListener('fullscreenchange', examFs);
+  document.addEventListener('contextmenu', examBlock);
+  document.addEventListener('copy', examBlock);
+  document.addEventListener('cut', examBlock);
+  document.addEventListener('paste', examBlock);
+  document.addEventListener('keydown', examKeys, true);
+  window.addEventListener('beforeunload', examUnload);
+}
+function examOff(){
+  document.body.classList.remove('exam');
+  $('examWall').classList.remove('on');
+  Exam.on=false; Exam.paused=false;
+  document.removeEventListener('visibilitychange', examLeave);
+  window.removeEventListener('blur', examLeave);
+  document.removeEventListener('fullscreenchange', examFs);
+  document.removeEventListener('contextmenu', examBlock);
+  document.removeEventListener('copy', examBlock);
+  document.removeEventListener('cut', examBlock);
+  document.removeEventListener('paste', examBlock);
+  document.removeEventListener('keydown', examKeys, true);
+  window.removeEventListener('beforeunload', examUnload);
+  if(document.fullscreenElement && document.exitFullscreen){
+    document.exitFullscreen().catch(function(){});
+  }
+}
+function goFullscreen(){
+  const el=document.documentElement;
+  if(document.fullscreenElement) return;
+  const f = el.requestFullscreen || el.webkitRequestFullscreen;
+  if(f){ try{ f.call(el); }catch(e){} }
+}
+function examBlock(e){ e.preventDefault(); return false; }
+function examUnload(e){ e.preventDefault(); e.returnValue=''; return ''; }
+function examKeys(e){
+  // ปิดทางลัดที่ใช้เปิดเครื่องมือ ดูซอร์ส คัดลอก พิมพ์ และเปิดแท็บใหม่
+  const k=(e.key||'').toLowerCase();
+  const bad = (e.key==='F12')
+    || (e.ctrlKey && e.shiftKey && ['i','j','c'].indexOf(k)>=0)
+    || (e.ctrlKey && ['u','s','p','c','x','v','t','n','f'].indexOf(k)>=0);
+  if(bad){ e.preventDefault(); e.stopPropagation(); return false; }
+}
+function examFs(){
+  if(!Exam.on) return;
+  if(!document.fullscreenElement) examLeave();
+}
+function examLeave(){
+  if(!Exam.on || Exam.paused) return;
+  if(!$('scr-play').classList.contains('show')) return;
+  if(G.phase==='idle' || G.phase==='end') return;
+  Exam.leaves++;
+  Exam.paused = true;
+  $('examCount').textContent = Exam.leaves;
+  $('examWall').classList.add('on');
+  const lim = CFG.leaveLimit|0;
+  if(lim>0 && Exam.leaves>=lim){
+    $('examWall').classList.remove('on');
+    Exam.paused=false;
+    endGame('leave');
+  }
+}
+function examResume(){
+  Exam.paused=false;
+  $('examWall').classList.remove('on');
+  goFullscreen();
+}
+
+/* ==========================================================
    ตัวเกม
    ========================================================== */
 async function beginGame(){
@@ -2658,6 +2780,7 @@ async function beginGame(){
   $('qimg').style.display='none';
 
   applySize();
+  examOn();
   stopTest();
   await startHand();
   if(Hand.mode!=='hand') hint(Hand.why || 'ใช้เมาส์หรือแตะจอเพื่อเลือกคำตอบ');
@@ -3548,6 +3671,7 @@ function finishRound(reason){
 
 function endGame(reason){
   G.phase='end';
+  examOff();
   const secs=Math.round((Date.now()-G.t0)/1000);
   S.done();
   $('rScore').textContent=G.score;
@@ -3562,11 +3686,15 @@ function endGame(reason){
   if(isBest){ bests[bestKey]=G.score; Store.set(K_BEST,bests); }
   $('rBest').textContent=Math.max(prev,G.score);
 
-  $('rHead').textContent = reason==='nohearts' ? 'หมดพลัง จบเกมก่อนกำหนด'
+  const leaveTxt = Exam.leaves>0 ? (' • ออกจากหน้าจอ '+Exam.leaves+' ครั้ง') : '';
+  $('rHead').textContent = reason==='leave' ? 'จบก่อนกำหนด เพราะออกจากหน้าจอหลายครั้ง'
+                         : reason==='nohearts' ? 'หมดพลัง จบเกมก่อนกำหนด'
                          : isBest ? 'ทำสถิติใหม่ได้แล้ว' : 'จบชุดข้อสอบ';
   $('rSub').textContent = quiz.title + ' • '
     + (G.game==='match' ? ('จับคู่ถูก '+G.correct+' จาก '+G.total+' คู่')
-                        : ('ตอบถูก '+G.correct+' จาก '+G.total+' ข้อ'));
+                        : ('ตอบถูก '+G.correct+' จาก '+G.total+' ข้อ'))
+    + leaveTxt;
+  $('rSub').className = Exam.leaves>0 ? 'muted leavebadge' : 'muted';
 
   msg('upMsg','');
   $('lanes').className='';
@@ -3599,6 +3727,7 @@ async function submitScore(secs){
 }
 
 function quitGame(){
+  examOff();
   dropCarried();
   pluginCleanup();
   Run.walls.forEach(function(w){ w.el.remove(); });
