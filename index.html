@@ -393,11 +393,51 @@ tr.me td{color:#fff}
 
 /* ปุ่มเลือกรูปแบบเกม */
 .picks{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
-.pick{text-align:left;padding:16px 18px;border-radius:16px;display:flex;flex-direction:column;gap:6px;
+.pick{text-align:left;padding:16px;border-radius:16px;display:flex;gap:14px;
   align-items:flex-start;background:var(--ink);border:2px solid var(--line)}
+.pick .ico{flex:0 0 auto;width:52px;height:52px;border-radius:14px;display:grid;place-items:center;
+  background:var(--surface);border:1px solid var(--line);font-size:26px;line-height:1}
+.pick .ico svg{width:30px;height:30px}
+.pick.on .ico{background:rgba(255,107,91,.18);border-color:var(--coral)}
+.pick .tx{min-width:0;display:flex;flex-direction:column;gap:5px}
 .pick.on{border-color:var(--coral);background:rgba(255,107,91,.12)}
 .pick b{font-family:var(--display);font-size:17px}
 .pick span{color:var(--chalk-dim);font-size:13.5px;line-height:1.55}
+
+/* ---------- คลังรูปภาพ ---------- */
+.imgrid{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));margin-top:12px}
+.imgcard{position:relative;border-radius:14px;overflow:hidden;background:var(--ink);
+  border:2px solid var(--line);cursor:pointer;text-align:left}
+.imgcard:hover{border-color:var(--cyan)}
+.imgcard .thumb{width:100%;aspect-ratio:4/3;object-fit:cover;display:block;background:#070b1c}
+.imgcard .cap{padding:8px 10px;font-size:13px;line-height:1.4;color:var(--chalk);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.imgcard .tagx{position:absolute;top:8px;left:8px;font-size:11px;padding:2px 8px;border-radius:999px;
+  background:rgba(16,23,54,.85);color:var(--cyan)}
+.imgcard .tagx.local{color:var(--amber)}
+.imgcard .del{position:absolute;top:6px;right:6px;width:26px;height:26px;border-radius:8px;
+  display:grid;place-items:center;font-size:15px;padding:0;
+  background:rgba(16,23,54,.85);border:1px solid var(--line);color:var(--rose)}
+
+#imgModal{position:fixed;inset:0;z-index:200;display:none;place-items:center;
+  background:rgba(7,11,28,.82);padding:20px}
+#imgModal.on{display:grid}
+#imgModal .panel{width:min(920px,96vw);max-height:88vh;overflow:auto;
+  background:var(--ink-2);border:1px solid var(--line);border-radius:20px;padding:24px}
+
+/* ---------- ตัวแก้ภาพติดป้าย ---------- */
+.lbstage{position:relative;border-radius:14px;overflow:hidden;background:#070b1c;
+  border:1px solid var(--line);min-height:200px;display:grid;place-items:center;cursor:crosshair}
+.lbstage img{display:block;max-width:100%;max-height:52vh}
+.lbstage .ph{color:var(--chalk-dim);font-size:14px;padding:40px 20px;text-align:center}
+.lbmark{position:absolute;transform:translate(-50%,-50%);min-width:34px;height:34px;padding:0 9px;
+  border-radius:10px;display:grid;place-items:center;cursor:grab;
+  background:rgba(255,107,91,.92);color:#25100c;font-family:var(--display);font-weight:700;font-size:15px;
+  border:2px solid #fff;box-shadow:0 4px 14px rgba(7,11,28,.5)}
+.lbmark.sel{background:var(--cyan);color:#06232a}
+.lbrow{display:flex;align-items:center;gap:10px}
+.lbrow .n{flex:0 0 30px;height:30px;border-radius:9px;display:grid;place-items:center;
+  background:var(--surface);color:var(--coral);font-family:var(--display);font-weight:700;font-size:14px}
 
 /* ---------- โหมดคุมสอบ ---------- */
 body.exam{user-select:none;-webkit-user-select:none}
@@ -709,6 +749,7 @@ details.more>summary:hover{color:var(--chalk)}
     </p>
     <div class="setlist" id="gameList"></div>
     <div class="row" style="margin-top:14px">
+      <button class="ghost" onclick="openImgPicker(null)">เปิดคลังรูปภาพ</button>
       <button class="ghost" onclick="document.getElementById('gameFile').click()">อัปโหลดไฟล์เกม .js</button>
       <button class="ghost" onclick="downloadGameTemplate()">ดาวน์โหลดไฟล์ตัวอย่างไว้เขียนเกมใหม่</button>
     </div>
@@ -735,6 +776,28 @@ details.more>summary:hover{color:var(--chalk)}
   </div>
  </div>
 </section>
+
+<div id="imgModal"><div class="panel">
+  <div style="display:flex;align-items:center;gap:12px">
+    <h2 style="font-size:21px;flex:1">คลังรูปภาพ</h2>
+    <button class="ghost mini" onclick="closeImgPicker()">ปิด</button>
+  </div>
+  <p class="muted" id="imgHint">เลือกรูปที่จะใช้ หรือเพิ่มรูปใหม่เข้าคลัง</p>
+  <div class="row" style="margin-top:8px">
+    <div class="field" style="margin-bottom:0"><label for="imgName">ชื่อรูป</label>
+      <input id="imgName" placeholder="เช่น กังหันลม" autocomplete="off"></div>
+    <div class="field" style="margin-bottom:0"><label for="imgUrl">ลิงก์รูป</label>
+      <input id="imgUrl" placeholder="https://... หรือ images/wind.png" autocomplete="off"></div>
+  </div>
+  <div class="row" style="margin-top:12px">
+    <button class="primary" onclick="addImageFromUrl()">เพิ่มเข้าคลัง</button>
+    <button class="ghost" onclick="document.getElementById('imgFile').click()">อัปโหลดรูปจากเครื่อง</button>
+    <button class="ghost" onclick="loadImages(true)">โหลดคลังใหม่</button>
+  </div>
+  <div class="notice" id="imgMsg"></div>
+  <div class="imgrid" id="imgGrid"></div>
+  <input type="file" id="imgFile" accept="image/*" hidden>
+</div></div>
 
 <div id="examWall"><div class="w">
   <h2>ออกจากหน้าทำข้อสอบ</h2>
@@ -872,6 +935,7 @@ details.more>summary:hover{color:var(--chalk)}
           <option value="match">จับคู่ — กำมือหยิบการ์ดไปวาง</option>
           <option value="face">ยืนเลือกช่อง — เดินไปยืนในช่อง</option>
           <option value="run">ด่านนั่งยืน — ฝ่ากำแพงแล้วตอบ</option>
+          <option value="label">ติดป้ายบนภาพ — วางคำลงช่องว่างบนรูป</option>
         </select></div>
       <div class="field"><label for="eTime">เวลาต่อข้อ วินาที</label>
         <input id="eTime" type="number" min="5" max="120" value="20"></div>
@@ -897,7 +961,32 @@ details.more>summary:hover{color:var(--chalk)}
     <p class="muted" style="margin-top:10px" id="eModeNote"></p>
   </div>
 
-  <div class="card">
+  <div class="card" id="labelCard" style="display:none">
+    <h3 style="font-size:18px;margin-bottom:6px">ภาพและช่องว่าง</h3>
+    <p class="muted" style="margin-top:0">
+      ใส่รูปก่อน แล้วคลิกบนรูปตรงจุดที่อยากให้มีช่องว่าง ระบบจะวางหมุดให้ พิมพ์คำเฉลยของหมุดนั้นในช่องด้านล่าง
+      ลากหมุดย้ายตำแหน่งได้ ต้องมีอย่างน้อยสองหมุด
+    </p>
+    <div class="row">
+      <div class="field" style="margin-bottom:0"><label for="lbUrl">ลิงก์รูปภาพ</label>
+        <input id="lbUrl" placeholder="https://... หรือเลือกจากคลัง" oninput="lbSetImage(this.value)"></div>
+      <div style="flex:0 0 auto;display:flex;align-items:flex-end;gap:10px">
+        <button class="primary" onclick="pickPicture()">เลือกจากคลังรูป</button>
+        <button class="ghost" onclick="document.getElementById('lbFile').click()">อัปโหลด</button>
+      </div>
+    </div>
+    <p class="muted" style="margin:10px 0">
+      ถ้าจะบันทึกขึ้นออนไลน์ให้นักเรียนทุกเครื่องเห็น ควรใช้ลิงก์รูป เพราะรูปที่อัปโหลดจะถูกฝังลงในไฟล์และมักใหญ่เกินที่กูเกิลชีตเก็บได้
+    </p>
+    <div class="lbstage" id="lbStage" onclick="lbAddSpot(event)">
+      <img id="lbImg" alt="" style="display:none">
+      <div class="ph" id="lbPh">ยังไม่ได้ใส่รูป</div>
+    </div>
+    <div class="setlist" id="lbList" style="margin-top:14px"></div>
+    <input type="file" id="lbFile" accept="image/*" hidden>
+  </div>
+
+  <div class="card" id="qCard">
     <h3 style="font-size:18px;margin-bottom:4px">เนื้อหา <span class="muted" id="eCount"></span></h3>
     <div id="eList" class="setlist" style="gap:14px"></div>
     <div class="row" style="margin-top:14px">
@@ -1385,7 +1474,7 @@ async function testApi(){
    ========================================================== */
 let quiz=null;
 function normalize(q){
-  const o=Object.assign({title:'ชุดข้อสอบ',timeLimit:20,shuffle:'no',game:'quiz',pick:0,mixChoices:0},q);
+  const o=Object.assign({title:'ชุดข้อสอบ',timeLimit:20,shuffle:'no',game:'quiz',pick:0,mixChoices:0,picture:'',spots:[]},q);
   o.questions=(o.questions||[]).filter(x=>x&&x.choices&&x.choices.length>=2).map(x=>({
     text:String(x.text||''), image:x.image||'', correct:Math.max(0,Math.min((x.choices.length-1),x.correct|0)),
     choices:x.choices.slice(0,4).map(c=>({text:String((c&&c.text)||''), image:(c&&c.image)||''}))
@@ -1596,6 +1685,8 @@ function editSet(it){
   E.timeLimit=d.timeLimit||20;
   E.pick=d.pick|0;
   E.mix=d.mixChoices|0;
+  E.picture=d.picture||'';
+  E.spots=(d.spots||[]).map(function(x){ return {x:+x.x||0, y:+x.y||0, label:x.label||''}; });
   E.shuffle=d.shuffle==='yes'?'yes':'no';
   E.pairs=(d.pairs&&d.pairs.length)
     ? d.pairs.map(function(x){ return {left:x.left||'', right:x.right||''}; })
@@ -1636,6 +1727,31 @@ function pickQuiz(data){
       + (use<tot ? ('มี '+tot+' ข้อ จะสุ่มมาถาม '+use+' ข้อ') : (tot+' ข้อ')),'ok');
 }
 function useSample(){ pickQuiz(SAMPLE); }
+document.getElementById('imgFile').addEventListener('change', function(e){
+  const f=e.target.files[0]; e.target.value='';
+  if(!f) return;
+  const r=new FileReader();
+  r.onload=function(){
+    addImage($('imgName').value.trim() || f.name.replace(/\.[^.]+$/,''), String(r.result));
+  };
+  r.readAsDataURL(f);
+});
+
+document.getElementById('lbFile').addEventListener('change', function(e){
+  const f=e.target.files[0]; e.target.value='';
+  if(!f) return;
+  const r=new FileReader();
+  r.onload=function(){
+    const url=String(r.result);
+    $('lbUrl').value=url;
+    lbSetImage(url);
+    const list=localImgs();
+    list.unshift({ id:'loc_'+Date.now(), name:f.name.replace(/\.[^.]+$/,''), url:url });
+    Store.set(K_IMG, list.slice(0,60));
+  };
+  r.readAsDataURL(f);
+});
+
 document.getElementById('gameFile').addEventListener('change', function(e){
   const f=e.target.files[0]; e.target.value='';
   if(!f) return;
@@ -2470,15 +2586,15 @@ function gameTracker(){ const d=gameDef(); return d ? d.tracker : 'hand'; }
 function isPlugin(){ const d=gameDef(); return !!(d && !d.builtin); }
 
 /* เกมที่มากับตัวเว็บ */
-registerGame({id:'quiz', builtin:true, tracker:'hand', name:'ยกมือตอบ',
+registerGame({icon:'<svg viewBox="0 0 24 24" fill="none" stroke="#22D3EE" stroke-width="1.8" stroke-linecap="round"><path d="M8 21V12a2 2 0 0 1 4 0V9a2 2 0 0 1 4 0v1a2 2 0 0 1 4 0v5c0 3-2 6-6 6h-2c-3 0-4-2-4-3Z"/><path d="M8 13 5 10"/></svg>', id:'quiz', builtin:true, tracker:'hand', name:'ยกมือตอบ',
   desc:'ชี้นิ้วไปที่คำตอบแล้วค้างไว้'});
-registerGame({id:'match', builtin:true, tracker:'hand', name:'จับคู่',
+registerGame({icon:'<svg viewBox="0 0 24 24" fill="none" stroke="#34D399" stroke-width="1.8"><rect x="2.5" y="5" width="8" height="6" rx="1.6"/><rect x="13.5" y="13" width="8" height="6" rx="1.6"/><path d="M10.5 8h4a2 2 0 0 1 2 2v3" stroke-dasharray="2 2"/></svg>', id:'match', builtin:true, tracker:'hand', name:'จับคู่',
   desc:'กำมือหยิบการ์ด แบมือวางลงช่อง',
   note:'โหมดจับคู่ใช้ท่ามือ กำมือคือหยิบ แบมือคือวาง ท่าโอเคคือยืนยัน ต้องมีคำถามอย่างน้อย 2 ข้อ'});
-registerGame({id:'face', builtin:true, tracker:'face', name:'ยืนเลือกช่อง',
+registerGame({icon:'<svg viewBox="0 0 24 24" fill="none" stroke="#FBBF24" stroke-width="1.8"><circle cx="12" cy="6.5" r="3"/><path d="M6 21v-4a6 6 0 0 1 12 0v4"/><path d="M3 21h18"/></svg>', id:'face', builtin:true, tracker:'face', name:'ยืนเลือกช่อง',
   desc:'เดินไปยืนในช่องคำตอบ',
   note:'ต้องมีที่ว่างให้เดินซ้ายขวาหน้ากล้อง ตั้งกล้องให้เห็นตัวตั้งแต่เอวขึ้นไป'});
-registerGame({id:'run', builtin:true, tracker:'face', name:'ด่านนั่งยืน',
+registerGame({icon:'<svg viewBox="0 0 24 24" fill="none" stroke="#FF6B5B" stroke-width="1.8" stroke-linecap="round"><circle cx="13" cy="4.5" r="2.2"/><path d="M11 21l2-6-3-3 1-4 3 2 3 1"/><path d="M9 12l-3 2"/><path d="M20 8v13"/></svg>', id:'run', builtin:true, tracker:'face', name:'ด่านนั่งยืน',
   desc:'นั่งยืนหลบกำแพงแล้วตอบคำถาม',
   note:'ต้องมีที่ให้ย่อตัวและยืนขึ้นได้เต็มที่ ตอนเริ่มจะให้ยืนนิ่งสองวินาทีเพื่อจำระดับหัว'});
 
@@ -2490,9 +2606,14 @@ function renderGamePicks(){
     const b=document.createElement('button');
     b.className='pick'+(id===G.game?' on':'');
     b.dataset.g=id;
+    const ic=document.createElement('span'); ic.className='ico';
+    const raw=d.icon||'🎮';
+    if(String(raw).indexOf('<svg')===0) ic.innerHTML=raw; else ic.textContent=raw;
+    const tx=document.createElement('span'); tx.className='tx';
     const t=document.createElement('b'); t.textContent=d.name;
     const sp=document.createElement('span'); sp.textContent=d.desc||'';
-    b.appendChild(t); b.appendChild(sp);
+    tx.appendChild(t); tx.appendChild(sp);
+    b.appendChild(ic); b.appendChild(tx);
     b.onclick=function(){ setGame(id); };
     box.appendChild(b);
   });
@@ -2565,7 +2686,9 @@ const CTX = {
   layer:null, stage:null, cfg:CFG, sound:null, letters:LETTERS,
   q:null, index:0, total:0, timeLeft:0, limit:0, input:{},
   W:0, H:0,
+  set:null, all:null,
   answer:function(i){ pluginAnswer(i); },
+  done:function(correct,total){ pluginDone(correct,total); },
   addScore:function(n){ G.score+=(n|0); $('hScore').textContent=G.score; },
   say:function(text,color){
     const v=$('verdict'); v.textContent=text||''; v.style.color=color||'var(--chalk)';
@@ -2623,15 +2746,24 @@ function pluginFrame(dt){
 function pluginShow(){
   const d=gameDef();
   G.phase='question'; G.locked=false;
-  G.limit=baseTime(); G.timeLeft=G.limit;
-  const q=quiz.questions[G.order[G.idx]];
+  const whole = (d.unit==='set');
+  const q = whole ? null : quiz.questions[G.order[G.idx]];
+  CTX.set=quiz; CTX.all=quiz.questions;
   CTX.q=q; CTX.index=G.idx; CTX.total=G.order.length;
+  if(whole){
+    const n=(quiz.spots&&quiz.spots.length) || quiz.questions.length;
+    G.total=n;
+    G.limit=Math.max(30, Math.round(baseTime()*Math.max(2, n*0.5)));
+  }else{
+    G.limit=baseTime();
+  }
+  G.timeLeft=G.limit;
   CTX.layer=$('gameLayer'); CTX.stage=$('stage'); CTX.sound=S; CTX._dw={};
 
   $('hQnum').textContent=G.idx+1;
-  $('qtext').textContent=q.text||'';
+  $('qtext').textContent = q ? (q.text||'') : (d.prompt||'');
   const im=$('qimg');
-  if(q.image){ im.src=q.image; im.style.display='block'; } else { im.style.display='none'; }
+  if(q && q.image){ im.src=q.image; im.style.display='block'; } else { im.style.display='none'; }
   $('answers').innerHTML=''; $('answers').className='';
   $('matchWrap').classList.remove('on');
   $('lanes').className='';
@@ -2668,6 +2800,30 @@ function pluginAnswer(i){
   updateTimer(0);
   try{ if(d.judged) d.judged(CTX, i, right); }catch(e){}
   setTimeout(nextQuestion, right?1500:2100);
+}
+
+/* เกมที่ตัดสินทั้งชุดรวดเดียว เรียกผ่าน ctx.done */
+function pluginDone(c, t){
+  if(G.phase!=='question'||G.locked) return;
+  G.locked=true; G.phase='feedback';
+  c=Math.max(0,c|0); t=Math.max(1,t|0);
+  const all=(c>=t);
+  let gained=c*CFG.base;
+  if(all){
+    gained += Math.round(CFG.base*0.5)
+           + (G.limit ? Math.round(CFG.speedBonus*Math.max(0,G.timeLeft)/G.limit) : 0);
+  }
+  G.score+=gained; G.correct+=c; G.total=t;
+  $('hScore').textContent=G.score;
+  const v=$('verdict');
+  v.textContent = all ? 'ถูกทั้งหมด' : ('ถูก '+c+' จาก '+t);
+  v.style.color = all ? 'var(--mint)' : (c ? 'var(--amber)' : 'var(--rose)');
+  v.classList.add('show');
+  if(gained){ const g=$('gain'); g.textContent='+'+gained; g.classList.add('show'); }
+  $('btnSkip').classList.add('off'); $('btnSkip').style.visibility='hidden';
+  updateTimer(0);
+  try{ const d=gameDef(); if(d.judged) d.judged(CTX, -1, all); }catch(e){}
+  setTimeout(nextQuestion, 3000);
 }
 
 function pluginCleanup(){
@@ -2816,6 +2972,11 @@ async function beginGame(){
     G.total=G.rounds.reduce((n,r)=>n+r.length,0);
     $('hUnit').textContent='ชุดที่';
     $('hQtot').textContent=G.rounds.length;
+  }else if(isPlugin() && gameDef().unit==='set'){
+    G.order=[0];
+    G.total=(quiz.spots&&quiz.spots.length)||quiz.questions.length;
+    $('hUnit').textContent='ภาพ';
+    $('hQtot').textContent=1;
   }else{
     if(gameTracker()==='face' || isPlugin()){
       const bad=quiz.questions.filter(q=>q.choices.length<2).length;
@@ -2949,7 +3110,11 @@ function answer(i){
 }
 function timeUp(){
   if(G.phase!=='question') return;
-  if(isPlugin()){ pluginAnswer(-1); return; }
+  if(isPlugin()){
+    const d=gameDef();
+    if(d.unit==='set'){ try{ d.timeup && d.timeup(CTX); }catch(e){} if(G.phase==='question') pluginDone(0, G.total); return; }
+    pluginAnswer(-1); return;
+  }
   if(G.game==='match'){ finishRound('time'); return; }
   if(G.game==='face'||G.game==='run'){ lockFace(); return; }
   G.locked=true; G.phase='feedback'; G.streak=0;
@@ -2968,7 +3133,11 @@ function timeUp(){
 function skipQuestion(){
   if(G.game==='run' && G.phase==='run'){ toQuestion(); return; }
   if(G.phase!=='question') return;
-  if(isPlugin()){ pluginAnswer(-1); return; }
+  if(isPlugin()){
+    const d=gameDef();
+    if(d.unit==='set'){ try{ d.timeup && d.timeup(CTX); }catch(e){} if(G.phase==='question') pluginDone(0, G.total); return; }
+    pluginAnswer(-1); return;
+  }
   G.timeLeft=0;
   if(G.game==='match'){ finishRound('skip'); return; }
   if(G.game==='face'||G.game==='run'){ lockFace(); return; }
@@ -3832,6 +4001,210 @@ async function clearRoomScores(){
 }
 
 /* ==========================================================
+   คลังรูปภาพ เพิ่มรูปครั้งเดียว เรียกใช้ได้ทุกที่
+   รูปที่เป็นลิงก์จะเก็บขึ้นกูเกิลชีต ทุกเครื่องเห็นเหมือนกัน
+   รูปที่อัปโหลดจากเครื่องจะเก็บไว้ในเครื่องนั้นเครื่องเดียว
+   ========================================================== */
+const K_IMG='handquiz:images';
+let SERVER_IMGS=[];
+let imgPickCb=null;
+
+function localImgs(){ return Store.get(K_IMG,[])||[]; }
+function allImgs(){ return SERVER_IMGS.concat(localImgs()); }
+
+function loadImages(manual){
+  if(!API.url){ if(manual) alert('ยังไม่ได้ต่อกับที่เก็บข้อสอบ รูปที่เพิ่มจะอยู่ในเครื่องนี้เท่านั้น'); renderImgGrid(); return; }
+  jsonp({action:'imgs'}).then(function(d){
+    SERVER_IMGS=(d.images||[]).map(function(x){
+      return { id:'srv_'+x.id, name:x.name, url:x.url, ro:true };
+    });
+    renderImgGrid();
+    if(manual) msg('imgMsg','โหลดคลังรูปแล้ว '+SERVER_IMGS.length+' รูป','ok');
+  }).catch(function(e){
+    renderImgGrid();
+    if(manual) msg('imgMsg','โหลดคลังไม่สำเร็จ '+e.message,'err');
+  });
+}
+
+function openImgPicker(cb){
+  imgPickCb = cb || null;
+  $('imgHint').textContent = cb ? 'กดที่รูปเพื่อเลือกใช้ หรือเพิ่มรูปใหม่เข้าคลัง'
+                                : 'เพิ่ม ลบ และดูรูปทั้งหมดในคลัง';
+  msg('imgMsg','');
+  $('imgModal').classList.add('on');
+  renderImgGrid();
+  loadImages(false);
+}
+function closeImgPicker(){ $('imgModal').classList.remove('on'); imgPickCb=null; }
+
+function renderImgGrid(){
+  const box=$('imgGrid'); if(!box) return;
+  const list=allImgs();
+  box.innerHTML='';
+  if(!list.length){
+    box.innerHTML='<p class="empty">ยังไม่มีรูปในคลัง เพิ่มด้วยการใส่ชื่อกับลิงก์ด้านบน หรือกดอัปโหลดรูปจากเครื่อง</p>';
+    return;
+  }
+  list.forEach(function(it){
+    const card=document.createElement('button'); card.className='imgcard';
+    const im=document.createElement('img'); im.className='thumb'; im.src=it.url; im.alt='';
+    im.onerror=function(){ im.style.opacity='.25'; };
+    const cap=document.createElement('div'); cap.className='cap'; cap.textContent=it.name||'ไม่มีชื่อ';
+    const tag=document.createElement('span'); tag.className='tagx'+(it.ro?'':' local');
+    tag.textContent=it.ro?'ในคลังกลาง':'เครื่องนี้';
+    card.appendChild(im); card.appendChild(cap); card.appendChild(tag);
+    const del=document.createElement('button'); del.className='del'; del.textContent='✕';
+    del.onclick=function(e){ e.stopPropagation(); delImage(it); };
+    card.appendChild(del);
+    card.onclick=function(){
+      if(imgPickCb){ const cb=imgPickCb; closeImgPicker(); cb(it); }
+      else { $('imgName').value=it.name||''; $('imgUrl').value=it.url; }
+    };
+    box.appendChild(card);
+  });
+}
+
+async function addImageFromUrl(){
+  const name=$('imgName').value.trim() || 'รูปไม่มีชื่อ';
+  const url=$('imgUrl').value.trim();
+  if(!url){ msg('imgMsg','ใส่ลิงก์รูปก่อน','err'); return; }
+  await addImage(name, url);
+}
+
+async function addImage(name, url){
+  const big = url.indexOf('data:')===0;
+  if(!big && API.url){
+    const pin=askPin(); if(!pin) return;
+    msg('imgMsg','กำลังเพิ่มเข้าคลังกลาง…');
+    try{
+      await apiPost({ action:'imgsave', pin:pin, name:name, url:url });
+      $('imgName').value=''; $('imgUrl').value='';
+      msg('imgMsg','เพิ่มแล้ว ทุกเครื่องจะเห็นรูปนี้','ok');
+      loadImages(false);
+      return;
+    }catch(e){
+      if(String(e.message).indexOf('รหัสครู')>=0) Store.set(K_PIN,'');
+      msg('imgMsg','เพิ่มขึ้นคลังกลางไม่สำเร็จ '+e.message+' จะเก็บไว้ในเครื่องนี้แทน','warn');
+    }
+  }
+  const list=localImgs();
+  list.unshift({ id:'loc_'+Date.now(), name:name, url:url });
+  if(!Store.set(K_IMG, list.slice(0,60))){
+    msg('imgMsg','พื้นที่ในเครื่องเต็ม ลบรูปเก่าออกก่อน หรือใช้ลิงก์รูปแทนการอัปโหลด','err');
+    return;
+  }
+  $('imgName').value=''; $('imgUrl').value='';
+  renderImgGrid();
+  msg('imgMsg', big ? 'เพิ่มรูปแล้ว รูปที่อัปโหลดจะอยู่ในเครื่องนี้เครื่องเดียว ถ้าจะให้ทุกเครื่องเห็นให้ใช้ลิงก์รูป'
+                    : 'เพิ่มรูปแล้ว เก็บไว้ในเครื่องนี้','ok');
+}
+
+async function delImage(it){
+  if(!confirm('ลบรูป "'+(it.name||'')+'" ออกจากคลังใช่หรือไม่')) return;
+  if(it.ro){
+    const pin=askPin(); if(!pin) return;
+    try{
+      await apiPost({ action:'imgdel', pin:pin, id:String(it.id).replace(/^srv_/,'') });
+      loadImages(false);
+      msg('imgMsg','ลบแล้ว','ok');
+    }catch(e){ msg('imgMsg','ลบไม่สำเร็จ '+e.message,'err'); }
+    return;
+  }
+  Store.set(K_IMG, localImgs().filter(function(x){ return x.id!==it.id; }));
+  renderImgGrid();
+  msg('imgMsg','ลบแล้ว','ok');
+}
+
+/* ให้ตัวแก้ภาพติดป้ายเรียกใช้ */
+function pickPicture(){
+  openImgPicker(function(it){
+    $('lbUrl').value=it.url;
+    lbSetImage(it.url);
+  });
+}
+
+/* ==========================================================
+   ตัวแก้ภาพติดป้าย ครูอัปรูปแล้วคลิกวางช่องว่างเอง
+   ========================================================== */
+function lbOn(){ return $('eGame').value==='label'; }
+
+function lbToggle(){
+  const on=lbOn();
+  $('labelCard').style.display = on ? '' : 'none';
+  $('qCard').style.display = on ? 'none' : '';
+  if(on) lbRender();
+}
+function lbSetImage(src){
+  E.picture=String(src||'').trim();
+  const img=$('lbImg'), ph=$('lbPh');
+  if(!E.picture){ img.style.display='none'; ph.style.display=''; ph.textContent='ยังไม่ได้ใส่รูป'; lbRender(); return; }
+  img.onload=function(){ img.style.display='block'; ph.style.display='none'; lbRender(); };
+  img.onerror=function(){ img.style.display='none'; ph.style.display=''; ph.textContent='เปิดรูปนี้ไม่ได้ ตรวจลิงก์อีกครั้ง'; };
+  img.src=E.picture;
+}
+function lbAddSpot(ev){
+  if(!E.picture) return;
+  if(ev.target.classList && ev.target.classList.contains('lbmark')) return;
+  const img=$('lbImg');
+  const r=img.getBoundingClientRect();
+  if(ev.clientX<r.left||ev.clientX>r.right||ev.clientY<r.top||ev.clientY>r.bottom) return;
+  E.spots.push({ x:(ev.clientX-r.left)/r.width, y:(ev.clientY-r.top)/r.height, label:'' });
+  lbRender();
+  const last=$('lb_l_'+(E.spots.length-1)); if(last) last.focus();
+}
+function lbReadLabels(){
+  E.spots.forEach(function(sp,i){
+    const el=$('lb_l_'+i); if(el) sp.label=el.value.trim();
+  });
+}
+function lbDel(i){ lbReadLabels(); E.spots.splice(i,1); lbRender(); }
+
+function lbRender(){
+  const stage=$('lbStage'), img=$('lbImg'), list=$('lbList');
+  Array.prototype.slice.call(stage.querySelectorAll('.lbmark')).forEach(function(m){ m.remove(); });
+  list.innerHTML='';
+  if(!E.spots.length){
+    list.innerHTML='<p class="empty">ยังไม่มีช่องว่าง คลิกบนรูปเพื่อวางหมุดแรก</p>';
+  }
+  if(E.picture && img.style.display!=='none'){
+    const sr=stage.getBoundingClientRect(), ir=img.getBoundingClientRect();
+    const ox=ir.left-sr.left, oy=ir.top-sr.top;
+    E.spots.forEach(function(sp,i){
+      const m=document.createElement('div');
+      m.className='lbmark'; m.textContent=(i+1);
+      m.style.left=(ox+sp.x*ir.width)+'px';
+      m.style.top=(oy+sp.y*ir.height)+'px';
+      m.onpointerdown=function(e){
+        e.stopPropagation(); e.preventDefault();
+        m.setPointerCapture(e.pointerId); m.classList.add('sel');
+        const move=function(ev){
+          const r=img.getBoundingClientRect();
+          sp.x=Math.max(0,Math.min(1,(ev.clientX-r.left)/r.width));
+          sp.y=Math.max(0,Math.min(1,(ev.clientY-r.top)/r.height));
+          m.style.left=(ox+sp.x*r.width)+'px';
+          m.style.top=(oy+sp.y*r.height)+'px';
+        };
+        const up=function(){ m.classList.remove('sel');
+          m.removeEventListener('pointermove',move); m.removeEventListener('pointerup',up); };
+        m.addEventListener('pointermove',move); m.addEventListener('pointerup',up);
+      };
+      stage.appendChild(m);
+    });
+  }
+  E.spots.forEach(function(sp,i){
+    const row=document.createElement('div'); row.className='setrow lbrow';
+    const n=document.createElement('div'); n.className='n'; n.textContent=(i+1);
+    const inp=document.createElement('input');
+    inp.id='lb_l_'+i; inp.value=sp.label||''; inp.placeholder='คำเฉลยของหมุดที่ '+(i+1)+' เช่น ใบพัด';
+    inp.oninput=function(){ sp.label=inp.value; };
+    const del=document.createElement('button'); del.className='ghost mini'; del.textContent='ลบ';
+    del.onclick=function(){ lbDel(i); };
+    row.appendChild(n); row.appendChild(inp); row.appendChild(del);
+    list.appendChild(row);
+  });
+}
+
+/* ==========================================================
    นำเข้าข้อสอบจากไฟล์ Excel หรือ CSV
    ========================================================== */
 const SHEET_COLS = ['โฟลเดอร์','ชุดข้อสอบ','เกม','เวลาต่อข้อ','คำถาม',
@@ -4040,10 +4413,10 @@ function downloadTemplate(){
    ตัวสร้างแบบฝึก และการสร้างลิงก์ให้นักเรียน
    ========================================================== */
 const E = { id:null, srvId:'', title:'', topic:'', folder:'', game:'quiz', timeLimit:20, shuffle:'no',
-            pick:0, mix:0, mode:'mcq', questions:[], pairs:[] };
+            pick:0, mix:0, mode:'mcq', questions:[], pairs:[], picture:'', spots:[] };
 
 function newSet(){
-  E.id=null; E.srvId=''; E.title=''; E.topic=''; E.folder='';
+  E.id=null; E.srvId=''; E.picture=''; E.spots=[]; E.title=''; E.topic=''; E.folder='';
   E.game=G.game||'quiz'; E.timeLimit=20; E.shuffle='no'; E.mode='mcq';
   E.questions=[ blankQ(), blankQ() ];
   E.pairs=[ {left:'',right:''}, {left:'',right:''}, {left:'',right:''} ];
@@ -4061,10 +4434,14 @@ function openEditor(){
   folderNames().forEach(function(f){
     const o=document.createElement('option'); o.value=f.name; dl.appendChild(o);
   });
-  $('eGame').value=E.game; $('eTime').value=E.timeLimit; $('ePick').value=E.pick||0; $('eMix').value=E.mix||0;
+  $('eGame').value=E.game;
+  $('eGame').onchange=lbToggle;
+  $('lbUrl').value=E.picture||'';
+  if(E.picture) lbSetImage(E.picture); else lbToggle(); $('eTime').value=E.timeLimit; $('ePick').value=E.pick||0; $('eMix').value=E.mix||0;
   $('eShuffle').value=E.shuffle; $('eMode').value=E.mode;
   msg('eMsg','');
   renderEditor();
+  lbToggle();
   show('scr-editor');
 }
 function blankQ(){ return { text:'', image:'', correct:0, choices:[{text:''},{text:''},{text:''}] }; }
@@ -4153,6 +4530,8 @@ function readEditor(){
   E.timeLimit=Math.max(5, Math.min(120, +$('eTime').value||20));
   E.pick=Math.max(0, Math.min(500, +$('ePick').value||0));
   E.mix=+$('eMix').value||0;
+  E.picture=$('lbUrl').value.trim();
+  lbReadLabels();
   E.shuffle=$('eShuffle').value;
   if(E.mode==='pairs'){
     E.pairs.forEach(function(p,i){
@@ -4218,8 +4597,28 @@ function buildSet(){
     mixChoices: E.mix,
     shuffle: E.shuffle,
     questions: [],
-    pairs: []
+    pairs: [],
+    picture: '',
+    spots: []
   };
+  if(E.game==='label'){
+    const sp=E.spots.filter(function(x){ return String(x.label||'').trim(); });
+    if(!E.picture) return { error:'ยังไม่ได้ใส่รูปภาพ' };
+    if(sp.length<2) return { error:'ต้องวางช่องว่างพร้อมคำเฉลยอย่างน้อย 2 จุด' };
+    out.picture=E.picture;
+    out.spots=sp.map(function(x){ return { x:+x.x, y:+x.y, label:String(x.label).trim() }; });
+    const labels=out.spots.map(function(x){ return x.label; });
+    out.questions=out.spots.map(function(x,i){
+      const others=labels.filter(function(_,k){ return k!==i; });
+      for(let m=others.length-1;m>0;m--){ const n=(Math.random()*(m+1))|0; const t=others[m]; others[m]=others[n]; others[n]=t; }
+      const opts=[x.label].concat(others.slice(0,3));
+      for(let m=opts.length-1;m>0;m--){ const n=(Math.random()*(m+1))|0; const t=opts[m]; opts[m]=opts[n]; opts[n]=t; }
+      return { text:'จุดที่ '+(i+1)+' ในภาพคืออะไร', image:'', correct:opts.indexOf(x.label),
+               choices:opts.map(function(t){ return {text:t}; }) };
+    });
+    return out;
+  }
+
   if(E.mode==='pairs'){
     const ps=E.pairs.filter(function(p){ return p.left && p.right; });
     if(ps.length<2) return { error:'ต้องมีคู่ที่กรอกครบทั้งสองช่องอย่างน้อย 2 คู่' };
@@ -4267,6 +4666,10 @@ async function saveOnline(){
   if(set.error){ msg('eMsg', set.error, 'err'); return; }
   if(!API.url){
     msg('eMsg','ยังไม่ได้ตั้งลิงก์เก็บข้อสอบ ไปที่หน้าสำหรับครู หัวข้อเชื่อมต่อออนไลน์','err');
+    return;
+  }
+  if(set.picture && set.picture.indexOf('data:')===0 && set.picture.length>30000){
+    msg('eMsg','รูปที่อัปโหลดใหญ่เกินกว่าจะเก็บออนไลน์ได้ ให้เอารูปไปฝากไว้ที่อื่นแล้วใส่เป็นลิงก์แทน หรือกดบันทึกไว้ในเครื่องนี้','err');
     return;
   }
   const pin=askPin(); if(!pin) return;
@@ -4478,7 +4881,7 @@ function loadFromHash(){
 
   renderSets();
   loadGames();
-  if(API.url) loadTeacherSets(false);
+  if(API.url){ loadTeacherSets(false); loadImages(false); }
   if(inFrame() && $('frameFix')) $('frameFix').classList.add('show');
   HIT_PAD = CFG.hitPad;
   fillCfg();
